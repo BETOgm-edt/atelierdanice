@@ -1,0 +1,86 @@
+/* ==========================================================================
+   ATELIER NICE — DESIGN SYSTEM TOKENS
+   Strict Palette: #B67068 (Rosa Principal) & #F3D8CF (Fundo Claro Principal)
+   ========================================================================== */
+
+:root {
+  /* Brand Core Palette */
+  --color-primary: #B67068;           /* Rosa Principal Oficial */
+  --color-primary-hover: #9E5850;
+  --color-primary-active: #88453D;
+  --color-primary-light: #CF8E86;
+  --color-primary-dark: #582924;      /* Rosa Nobre Profundo / Veludo Rosado */
+  --color-primary-subtle: rgba(182, 112, 104, 0.16);
+  --color-primary-glow: rgba(182, 112, 104, 0.35);
+
+  /* Blush & Pink Background Foundations */
+  --color-bg-primary: #F3D8CF;        /* Fundo Claro Principal Oficial */
+  --color-bg-subtle: #E8C8BE;         /* Tom blush rosado enriquecido */
+  --color-bg-surface: #FAEDE7;        /* Superfície blush suave e feminina */
+  --color-bg-card: #FAF0EB;           /* Cartões com tonalidade rosada delicada */
+  --color-bg-card-hover: #FFFFFF;
+  --color-bg-pure-white: #FFFFFF;
+  --color-bg-dark-rose: #4E231F;      /* Fundo escuro rosado nobre para rodapé e destaque */
+
+  /* Typography & Contrast Tones */
+  --color-text-main: #2A1512;         /* Terracota Escuro Profundo para Máximo Contraste Editorial */
+  --color-text-secondary: #5C3530;    /* Marrom rosado aveludado */
+  --color-text-muted: #8E5D56;        /* Rosa terroso sutil */
+  --color-text-light: #FAF0EC;        /* Textos sobre botões e fundos escuros */
+  
+  /* Borders & Dividers (Warm Rose) */
+  --color-border: #DFBCB0;
+  --color-border-subtle: #EBCEC4;
+  --color-border-strong: #C99587;
+  --color-border-active: #B67068;
+
+  /* Status Colors (Harmonized with Atelier Palette) */
+  --color-success: #2F6942;
+  --color-success-bg: #E6F3EA;
+  --color-success-border: #B2D8BD;
+
+  --color-warning: #9C5E00;
+  --color-warning-bg: #FCF4DF;
+  --color-warning-border: #F7D896;
+
+  --color-danger: #A32828;
+  --color-danger-bg: #FBE6E6;
+  --color-danger-border: #F2AEAE;
+
+  --color-info: #4F637F;
+  --color-info-bg: #EBF1F8;
+  --color-info-border: #BFD0E4;
+
+  --color-accent-gold: #B8854E;
+  --color-accent-gold-bg: #FAF1E6;
+
+  /* Typography Families */
+  --font-editorial: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Radius Tokens */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Shadows (with subtle rose undertone) */
+  --shadow-xs: 0 1px 3px rgba(182, 112, 104, 0.08);
+  --shadow-sm: 0 4px 14px -2px rgba(182, 112, 104, 0.14);
+  --shadow-md: 0 10px 28px -4px rgba(182, 112, 104, 0.18), 0 3px 8px -2px rgba(42, 21, 18, 0.06);
+  --shadow-lg: 0 18px 48px -8px rgba(182, 112, 104, 0.24), 0 6px 16px -3px rgba(42, 21, 18, 0.08);
+  --shadow-inner: inset 0 2px 4px rgba(182, 112, 104, 0.08);
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-normal: 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-smooth: 400ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Layout Widths */
+  --container-max-width: 1320px;
+  --admin-sidebar-width: 290px;
+  --admin-header-height: 84px;
+  --public-header-height: 124px;
+}
