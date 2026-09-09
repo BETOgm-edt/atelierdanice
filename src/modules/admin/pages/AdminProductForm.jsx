@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   Check,
   ChevronRight,
+  ChevronLeft,
   Upload,
   Image as ImageIcon,
   Trash2,
@@ -17,7 +18,12 @@ import {
   Eye,
   AlertCircle,
   Plus,
-  RotateCcw
+  RotateCcw,
+  Camera,
+  Loader2,
+  Sparkles,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { useStore } from '../../../context/StoreContext';
 import { dataService } from '../../../data';
@@ -41,6 +47,8 @@ export const AdminProductForm = ({ editingProduct = null, onCancel, onSuccess, o
 
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState('');
   const [imageUrlInput, setImageUrlInput] = useState('');
 
   // Initial State Setup
@@ -154,21 +162,49 @@ export const AdminProductForm = ({ editingProduct = null, onCancel, onSuccess, o
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    for (const file of files) {
-      try {
-        const uploaded = await dataService.storage.uploadImage(file, formData.name);
-        setFormData(prev => {
-          const isPrimary = prev.images.length === 0;
-          return {
-            ...prev,
-            images: [...prev.images, { ...uploaded, isPrimary, order: prev.images.length }]
-          };
-        });
-      } catch (err) {
-        console.error('Upload error:', err);
+    try {
+      setIsUploading(true);
+      setUploadMessage(`Otimizando e comprimindo ${files.length} imagem(ns) para WebP...`);
+      
+      let successCount = 0;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setUploadMessage(`Comprimindo imagem ${i + 1} de ${files.length}...`);
+        
+        try {
+          const uploaded = await dataService.storage.uploadImage(file, {
+            productName: formData.name || 'Vestido Atelier Nice',
+            productId: formData.id || 'draft',
+            position: formData.images.length + i
+          });
+          
+          setFormData(prev => {
+            const isPrimary = prev.images.length === 0;
+            return {
+              ...prev,
+              images: [...prev.images, { ...uploaded, isPrimary: isPrimary || uploaded.isPrimary, order: prev.images.length }]
+            };
+          });
+          successCount++;
+        } catch (uploadErr) {
+          console.error(`Erro ao subir arquivo ${file.name}:`, uploadErr);
+        }
       }
+
+      if (successCount > 0) {
+        showToast(`${successCount} foto(s) WebP otimizada(s) e adicionada(s)!`, 'success');
+      } else {
+        showToast('Não foi possível carregar as imagens.', 'error');
+      }
+    } catch (err) {
+      console.error('Upload general error:', err);
+      showToast('Erro no processamento de mídia.', 'error');
+    } finally {
+      setIsUploading(false);
+      setUploadMessage('');
+      // Reset input value so same files can be reselected if needed
+      e.target.value = '';
     }
-    showToast(`${files.length} foto(s) carregada(s)!`, 'success');
   };
 
   const handleSetPrimaryImage = (imgId) => {
@@ -176,13 +212,39 @@ export const AdminProductForm = ({ editingProduct = null, onCancel, onSuccess, o
       ...prev,
       images: dataService.storage.setPrimary(prev.images, imgId)
     }));
+    showToast('Foto principal da vitrine atualizada!', 'info');
   };
 
-  const handleRemoveImage = (imgId) => {
-    setFormData(prev => ({
-      ...prev,
-      images: dataService.storage.remove(prev.images, imgId)
-    }));
+  const handleRemoveImage = async (imgId) => {
+    const targetImg = formData.images.find(img => img.id === imgId);
+    if (targetImg?.storagePath) {
+      await dataService.storage.deleteFile(targetImg.storagePath);
+    }
+    setFormData(prev => {
+      const remaining = dataService.storage.remove(prev.images, imgId);
+      // If deleted image was primary, make first remaining primary
+      if (targetImg?.isPrimary && remaining.length > 0) {
+        remaining[0].isPrimary = true;
+      }
+      return { ...prev, images: remaining };
+    });
+    showToast('Imagem removida.', 'info');
+  };
+
+  const handleMoveImage = (currentIndex, direction) => {
+    const targetIndex = currentIndex + direction;
+    if (targetIndex < 0 || targetIndex >= formData.images.length) return;
+
+    setFormData(prev => {
+      const newImages = [...prev.images];
+      const temp = newImages[currentIndex];
+      newImages[currentIndex] = newImages[targetIndex];
+      newImages[targetIndex] = temp;
+      return {
+        ...prev,
+        images: newImages.map((img, idx) => ({ ...img, order: idx }))
+      };
+    });
   };
 
   // Pricing calculations
@@ -511,42 +573,113 @@ export const AdminProductForm = ({ editingProduct = null, onCancel, onSuccess, o
            ========================================================================= */}
         {currentStep === 2 && (
           <div>
-            <h3 style={{ fontFamily: 'var(--font-editorial)', fontSize: '1.6rem', color: 'var(--color-text-main)', marginBottom: '0.4rem' }}>
-              Etapa 2 — Galeria de Fotos & Mídia
-            </h3>
-            <p style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)', marginBottom: '2rem' }}>
-              Adicione fotos profissionais de alta resolução. Escolha qual será a foto principal do catálogo.
-            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div>
+                <h3 style={{ fontFamily: 'var(--font-editorial)', fontSize: '1.6rem', color: 'var(--color-text-main)', marginBottom: '0.4rem' }}>
+                  Etapa 2 — Galeria de Fotos & Mídia
+                </h3>
+                <p style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)' }}>
+                  Adicione fotos de alta resolução do vestido. As imagens são automaticamente convertidas para WebP para carregamento ultrarrápido.
+                </p>
+              </div>
 
-            {/* Upload Area */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.4rem 0.8rem',
+                  backgroundColor: 'var(--color-bg-subtle)',
+                  borderRadius: 'var(--radius-full)',
+                  border: '1px solid var(--color-border)',
+                  fontSize: '0.78rem',
+                  color: 'var(--color-primary)',
+                  fontWeight: 600
+                }}
+              >
+                <Sparkles size={14} />
+                <span>Otimizador WebP Ativo</span>
+              </div>
+            </div>
+
+            {/* Upload Action Box */}
             <div
               style={{
                 border: '2px dashed var(--color-border)',
                 borderRadius: 'var(--radius-lg)',
-                padding: '2rem',
+                padding: '2.5rem 1.5rem',
                 textAlign: 'center',
                 backgroundColor: 'var(--color-bg-surface)',
-                marginBottom: '1.5rem'
+                marginBottom: '1.5rem',
+                position: 'relative'
               }}
             >
-              <Upload size={36} color="var(--color-primary)" style={{ margin: '0 auto 0.75rem' }} />
-              <h4 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-main)', marginBottom: '0.35rem' }}>
-                Arraste suas fotos aqui ou clique para selecionar
+              <Upload size={38} color="var(--color-primary)" style={{ margin: '0 auto 0.75rem' }} />
+              <h4 style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--color-text-main)', marginBottom: '0.35rem' }}>
+                Selecione as fotos do vestido ou tire uma foto agora
               </h4>
-              <p style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', marginBottom: '1.25rem' }}>
-                Suporta PNG, JPG, JPEG e WebP de alta resolução.
+              <p style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', marginBottom: '1.5rem' }}>
+                Suporta fotos direto do smartphone, PNG, JPG, JPEG e WebP (resolução até 4K).
               </p>
 
-              <label className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', cursor: 'pointer' }}>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  style={{ display: 'none' }}
-                />
-                <span>Escolher Arquivos do Computador</span>
-              </label>
+              {/* Action Buttons: Camera + File Picker */}
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                {/* Mobile Camera Button */}
+                <label
+                  className="btn btn-primary btn-sm"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: isUploading ? 'not-allowed' : 'pointer' }}
+                >
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleFileUpload}
+                    disabled={isUploading}
+                    style={{ display: 'none' }}
+                  />
+                  <Camera size={16} />
+                  <span>Tirar Foto (Câmera)</span>
+                </label>
+
+                {/* Computer / Gallery File Picker */}
+                <label
+                  className="btn btn-secondary btn-sm"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: isUploading ? 'not-allowed' : 'pointer' }}
+                >
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    disabled={isUploading}
+                    style={{ display: 'none' }}
+                  />
+                  <ImageIcon size={16} />
+                  <span>Escolher da Galeria / Arquivos</span>
+                </label>
+              </div>
+
+              {/* Loading Upload Progress */}
+              {isUploading && (
+                <div
+                  style={{
+                    marginTop: '1.5rem',
+                    padding: '0.75rem 1.25rem',
+                    backgroundColor: 'var(--color-bg-card)',
+                    borderRadius: 'var(--radius-md)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    border: '1px solid var(--color-border)',
+                    boxShadow: 'var(--shadow-xs)'
+                  }}
+                >
+                  <Loader2 size={18} color="var(--color-primary)" className="spinner" />
+                  <span style={{ fontSize: '0.85rem', color: 'var(--color-text-main)', fontWeight: 500 }}>
+                    {uploadMessage || 'Processando fotos...'}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Quick URL Input */}
@@ -564,78 +697,176 @@ export const AdminProductForm = ({ editingProduct = null, onCancel, onSuccess, o
               </button>
             </form>
 
-            {/* Image List / Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1.25rem' }}>
-              {formData.images.map((img, idx) => (
-                <div
-                  key={img.id}
-                  style={{
-                    position: 'relative',
-                    borderRadius: 'var(--radius-md)',
-                    overflow: 'hidden',
-                    border: `2px solid ${img.isPrimary ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                    backgroundColor: 'var(--color-bg-subtle)'
-                  }}
-                >
-                  <img
-                    src={img.url}
-                    alt={img.alt || `Foto ${idx + 1}`}
-                    style={{ width: '100%', height: '220px', objectFit: 'cover' }}
-                  />
+            {/* Images Grid */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--color-text-main)' }}>
+                  Fotos Cadastradas ({formData.images.length})
+                </span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                  Use as setas para reordenar ou defina a foto de capa principal.
+                </span>
+              </div>
 
-                  {/* Primary Badge */}
-                  {img.isPrimary && (
-                    <span
-                      className="badge badge-primary"
+              {formData.images.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2.5rem', backgroundColor: 'var(--color-bg-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border-subtle)' }}>
+                  <ImageIcon size={32} color="var(--color-text-muted)" style={{ margin: '0 auto 0.5rem' }} />
+                  <p style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)' }}>
+                    Nenhuma foto adicionada ainda. Adicione pelo menos uma foto para publicar o vestido.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.25rem' }}>
+                  {formData.images.map((img, idx) => (
+                    <div
+                      key={img.id || idx}
                       style={{
-                        position: 'absolute',
-                        top: '0.5rem',
-                        left: '0.5rem',
-                        fontSize: '0.65rem'
+                        position: 'relative',
+                        borderRadius: 'var(--radius-md)',
+                        overflow: 'hidden',
+                        border: `2px solid ${img.isPrimary ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                        backgroundColor: 'var(--color-bg-subtle)',
+                        boxShadow: img.isPrimary ? '0 0 0 2px var(--color-primary-subtle)' : 'var(--shadow-xs)'
                       }}
                     >
-                      Foto Principal
-                    </span>
-                  )}
+                      <img
+                        src={img.url}
+                        alt={img.alt || `Foto ${idx + 1}`}
+                        style={{ width: '100%', height: '240px', objectFit: 'cover' }}
+                      />
 
-                  {/* Controls */}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      padding: '0.4rem',
-                      backgroundColor: 'rgba(41,22,19,0.75)',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
-                    }}
-                  >
-                    {!img.isPrimary ? (
-                      <button
-                        type="button"
-                        onClick={() => handleSetPrimaryImage(img.id)}
-                        style={{ fontSize: '0.72rem', color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '2px', cursor: 'pointer' }}
+                      {/* Primary Cover Badge */}
+                      {img.isPrimary && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '0.5rem',
+                            left: '0.5rem',
+                            backgroundColor: 'var(--color-primary)',
+                            color: '#FFFFFF',
+                            padding: '0.25rem 0.55rem',
+                            borderRadius: 'var(--radius-full)',
+                            fontSize: '0.68rem',
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                            boxShadow: 'var(--shadow-sm)'
+                          }}
+                        >
+                          <Star size={11} fill="#FFFFFF" />
+                          <span>Capa Principal</span>
+                        </div>
+                      )}
+
+                      {/* Order indicator */}
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: '0.5rem',
+                          right: '0.5rem',
+                          backgroundColor: 'rgba(41,22,19,0.7)',
+                          color: '#FFFFFF',
+                          padding: '0.2rem 0.45rem',
+                          borderRadius: 'var(--radius-xs)',
+                          fontSize: '0.68rem',
+                          fontWeight: 600
+                        }}
                       >
-                        <Star size={12} />
-                        <span>Definir Principal</span>
-                      </button>
-                    ) : (
-                      <span style={{ fontSize: '0.72rem', color: 'var(--color-accent-gold)' }}>★ Principal</span>
-                    )}
+                        #{idx + 1}
+                      </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveImage(img.id)}
-                      style={{ color: '#FF9999', padding: '2px', cursor: 'pointer' }}
-                      title="Excluir foto"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
+                      {/* Controls Bottom Overlay */}
+                      <div
+                        style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          padding: '0.45rem 0.5rem',
+                          backgroundColor: 'rgba(41,22,19,0.85)',
+                          backdropFilter: 'blur(4px)',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: '0.25rem'
+                        }}
+                      >
+                        {/* Reorder Left/Right buttons */}
+                        <div style={{ display: 'flex', gap: '2px' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleMoveImage(idx, -1)}
+                            disabled={idx === 0}
+                            style={{
+                              color: idx === 0 ? '#666' : '#FFF',
+                              backgroundColor: 'transparent',
+                              padding: '2px 4px',
+                              cursor: idx === 0 ? 'default' : 'pointer',
+                              borderRadius: '2px'
+                            }}
+                            title="Mover para a esquerda"
+                          >
+                            <ChevronLeft size={16} />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleMoveImage(idx, 1)}
+                            disabled={idx === formData.images.length - 1}
+                            style={{
+                              color: idx === formData.images.length - 1 ? '#666' : '#FFF',
+                              backgroundColor: 'transparent',
+                              padding: '2px 4px',
+                              cursor: idx === formData.images.length - 1 ? 'default' : 'pointer',
+                              borderRadius: '2px'
+                            }}
+                            title="Mover para a direita"
+                          >
+                            <ChevronRight size={16} />
+                          </button>
+                        </div>
+
+                        {/* Set Primary Button */}
+                        {!img.isPrimary ? (
+                          <button
+                            type="button"
+                            onClick={() => handleSetPrimaryImage(img.id)}
+                            style={{
+                              fontSize: '0.72rem',
+                              color: '#FFFFFF',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '2px',
+                              cursor: 'pointer',
+                              backgroundColor: 'rgba(255,255,255,0.15)',
+                              padding: '2px 6px',
+                              borderRadius: 'var(--radius-xs)'
+                            }}
+                          >
+                            <Star size={11} />
+                            <span>Definir Capa</span>
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: '0.72rem', color: 'var(--color-accent-gold)', fontWeight: 600 }}>
+                            ★ Capa
+                          </span>
+                        )}
+
+                        {/* Delete Button */}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(img.id)}
+                          style={{ color: '#FF8888', padding: '2px 4px', cursor: 'pointer', backgroundColor: 'transparent' }}
+                          title="Excluir foto"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           </div>
         )}

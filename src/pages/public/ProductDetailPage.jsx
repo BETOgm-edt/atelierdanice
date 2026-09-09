@@ -49,12 +49,21 @@ export const ProductDetailPage = ({ product, onNavigate, onSelectProduct }) => {
     ? (product.rentalPrice || product.price * 0.35)
     : (product.promotionalPrice || product.price);
 
-  // WhatsApp Link
-  const phone = settings?.store?.whatsapp || '5511999998888';
-  const waMessage = encodeURIComponent(
-    `Olá! Tenho interesse no vestido "${product.name}" (SKU: ${product.sku}, Tamanho: ${selectedSize}, Modalidade: ${selectedModality === 'rent' ? 'Aluguel' : 'Compra'}) do Atelier Nice e gostaria de agendar uma prova ou saber mais detalhes.`
-  );
-  const waUrl = `https://wa.me/${phone}?text=${waMessage}`;
+  // WhatsApp Direct Consultation Link
+  const rawPhone = import.meta.env.VITE_WHATSAPP_PHONE || settings?.store?.whatsapp || '5511999998888';
+  const phone = rawPhone.replace(/\D/g, '');
+  const modalityLabel = selectedModality === 'rent' ? 'Aluguel' : 'Compra';
+  const priceFormatted = formatCurrency(currentPrice);
+  const waMessage = `Olá! Gostaria de saber mais sobre este vestido:
+
+Vestido: ${product.name}
+SKU: ${currentVariant?.sku || product.sku}
+Modalidade: ${modalityLabel}
+Preço: ${priceFormatted}
+
+Gostaria de verificar disponibilidade.`;
+
+  const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(waMessage)}`;
 
   // Related products
   const relatedProducts = products

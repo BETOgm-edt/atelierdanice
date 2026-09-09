@@ -6,7 +6,8 @@ export const WhatsAppFloatingButton = ({ contextProductName = null, contextProdu
   const { settings } = useStore();
   const [isOpen, setIsOpen] = useState(false);
 
-  const phone = settings?.store?.whatsapp || '5511999998888';
+  const rawPhone = import.meta.env.VITE_WHATSAPP_PHONE || settings?.store?.whatsapp || '5511999998888';
+  const phone = rawPhone.replace(/\D/g, '');
 
   const defaultMsg = contextProductName
     ? `Olá! Tenho interesse no vestido ${contextProductName}${contextProductSKU ? ` (Ref: ${contextProductSKU})` : ''} do Atelier Nice e gostaria de agendar uma prova ou saber mais informações.`

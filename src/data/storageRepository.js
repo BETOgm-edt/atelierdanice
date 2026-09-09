@@ -1,83 +1,160 @@
 /**
- * ATELIER NICE — IMAGE & MEDIA STORAGE SERVICE ABSTRACTION
- * Decouples image uploading, ordering, and deletion from the UI.
- * Ready for drop-in replacement with AWS S3, Supabase Storage, Cloudinary, or Firebase.
+ * ATELIER NICE — STORAGE REPOSITORY (SUPABASE STORAGE + OPTIMIZATION)
+ * Manages product media upload to Supabase Storage with WebP compression.
  */
+
+import { supabase, isSupabaseConfigured } from '../lib/supabase/client';
+import { optimizeImage } from '../core/utils/imageOptimizer';
+
+const BUCKET_NAME = 'products';
 
 class StorageRepository {
   /**
-   * Upload an image file (File object or Data URL / Remote URL)
-   * @param {File|string} fileOrUrl
-   * @returns {Promise<{id: string, url: string, alt: string, isPrimary: boolean, order: number}>}
+   * Optimizes an image and uploads it to the Supabase Storage 'products' bucket.
+   * @param {File|Blob} file 
+   * @param {Object} metadata 
+   * @returns {Promise<{ id: string, storagePath: string, publicUrl: string, url: string, altText: string, isPrimary: boolean, isCover: boolean, position: number }>}
    */
-  async uploadImage(fileOrUrl, customAlt = '') {
-    if (typeof fileOrUrl === 'string') {
-      // Remote or direct URL
-      return {
-        id: `img-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        url: fileOrUrl,
-        alt: customAlt || 'Foto Vestido Atelier Nice',
-        isPrimary: false,
-        order: 0
+  async uploadImage(file, metadata = {}) {
+    // 1. Client-Side Image Optimization (Canvas -> WebP compression)
+    let optimized;
+    try {
+      optimized = await optimizeImage(file, {
+        maxWidth: 1920,
+        maxHeight: 1920,
+        quality: 0.84
+      });
+    } catch (optErr) {
+      console.warn('Compressor de imagem avisou:', optErr.message);
+      // If conversion fails (e.g. non-standard format), use raw file
+      optimized = {
+        file,
+        previewUrl: URL.createObjectURL(file),
+        optimizedSize: file.size
       };
     }
 
-    if (fileOrUrl instanceof File) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          resolve({
-            id: `img-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-            url: e.target.result,
-            alt: customAlt || fileOrUrl.name.replace(/\.[^/.]+$/, ''),
-            isPrimary: false,
-            order: 0,
-            size: fileOrUrl.size,
-            mimeType: fileOrUrl.type
+    const productId = metadata.productId || 'draft-uploads';
+    const isCover = metadata.isPrimary || metadata.isCover || false;
+    const prefix = isCover ? 'cover' : 'image';
+    const timestamp = Date.now();
+    const randomSuffix = Math.random().toString(36).substring(2, 6);
+    const storagePath = `${productId}/${prefix}-${timestamp}-${randomSuffix}.webp`;
+
+    // 2. Upload to Supabase Storage if configured
+    if (isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase.storage
+          .from(BUCKET_NAME)
+          .upload(storagePath, optimized.file, {
+            contentType: 'image/webp',
+            cacheControl: '31536000', // 1 year immutable cache
+            upsert: false
           });
+
+        if (error) {
+          console.error('Supabase storage upload error:', error);
+          throw error;
+        }
+
+        const { data: publicData } = supabase.storage
+          .from(BUCKET_NAME)
+          .getPublicUrl(data.path);
+
+        const publicUrl = publicData.publicUrl;
+
+        return {
+          id: `img-${timestamp}-${randomSuffix}`,
+          storagePath: data.path,
+          publicUrl,
+          url: publicUrl, // Compatibility alias
+          alt: metadata.alt || metadata.productName || 'Foto Vestido Atelier Nice',
+          altText: metadata.alt || metadata.productName || 'Foto Vestido Atelier Nice',
+          isPrimary: isCover,
+          isCover,
+          position: metadata.position || 0,
+          sizeBytes: optimized.optimizedSize
         };
-        reader.onerror = (err) => reject(err);
-        reader.readAsDataURL(fileOrUrl);
-      });
+      } catch (uploadErr) {
+        console.warn('Fallback para visualização local:', uploadErr.message);
+      }
     }
 
-    throw new Error('Formato de arquivo ou URL inválido.');
+    // Local Object URL fallback if offline or Supabase unconfigured
+    return {
+      id: `img-${timestamp}-${randomSuffix}`,
+      storagePath,
+      publicUrl: optimized.previewUrl,
+      url: optimized.previewUrl,
+      alt: metadata.alt || metadata.productName || 'Foto Vestido Atelier Nice',
+      altText: metadata.alt || metadata.productName || 'Foto Vestido Atelier Nice',
+      isPrimary: isCover,
+      isCover,
+      position: metadata.position || 0,
+      sizeBytes: optimized.optimizedSize
+    };
   }
 
   /**
-   * Mark a specific image as primary
+   * Delete a single image file from Supabase Storage.
+   * @param {string} storagePath 
    */
-  setPrimary(images = [], imageId) {
-    if (!Array.isArray(images)) return [];
-    return images.map(img => ({
+  async deleteFile(storagePath) {
+    if (!storagePath) return true;
+
+    if (isSupabaseConfigured()) {
+      try {
+        const { error } = await supabase.storage
+          .from(BUCKET_NAME)
+          .remove([storagePath]);
+        if (error) throw error;
+        return true;
+      } catch (err) {
+        console.warn('Erro ao remover imagem do storage:', err.message);
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Remove all images associated with a product folder to prevent orphaned files.
+   * @param {string} productId 
+   */
+  async deleteProductFolder(productId) {
+    if (!productId || !isSupabaseConfigured()) return true;
+
+    try {
+      const { data: list, error: listError } = await supabase.storage
+        .from(BUCKET_NAME)
+        .list(productId);
+
+      if (listError || !list || list.length === 0) return true;
+
+      const pathsToRemove = list.map((file) => `${productId}/${file.name}`);
+      const { error: removeError } = await supabase.storage
+        .from(BUCKET_NAME)
+        .remove(pathsToRemove);
+
+      if (removeError) throw removeError;
+      return true;
+    } catch (err) {
+      console.warn('Erro ao limpar pasta do produto no storage:', err.message);
+      return false;
+    }
+  }
+
+  /**
+   * Sets an image as the primary cover in an array of images.
+   */
+  setPrimary(images, selectedId) {
+    return images.map((img) => ({
       ...img,
-      isPrimary: img.id === imageId
+      isPrimary: img.id === selectedId,
+      isCover: img.id === selectedId
     }));
-  }
-
-  /**
-   * Reorder image positions
-   */
-  reorder(images = [], fromIndex, toIndex) {
-    if (!Array.isArray(images)) return [];
-    const result = Array.from(images);
-    const [removed] = result.splice(fromIndex, 1);
-    result.splice(toIndex, 0, removed);
-    return result.map((img, idx) => ({ ...img, order: idx }));
-  }
-
-  /**
-   * Remove image from list
-   */
-  remove(images = [], imageId) {
-    if (!Array.isArray(images)) return [];
-    const filtered = images.filter(img => img.id !== imageId);
-    // If removed was primary and items still remain, set first as primary
-    if (filtered.length > 0 && !filtered.some(img => img.isPrimary)) {
-      filtered[0].isPrimary = true;
-    }
-    return filtered.map((img, idx) => ({ ...img, order: idx }));
   }
 }
 
 export const storageRepository = new StorageRepository();
+export default storageRepository;

@@ -30,7 +30,8 @@ export const ContactPage = () => {
     showToast('Solicitação de agendamento enviada com sucesso! Entraremos em contato via WhatsApp.', 'success');
   };
 
-  const phone = store.whatsapp || '5511999998888';
+  const rawPhone = import.meta.env.VITE_WHATSAPP_PHONE || store.whatsapp || '5511999998888';
+  const phone = rawPhone.replace(/\D/g, '');
   const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent('Olá! Gostaria de agendar um horário para prova de vestidos no Atelier Nice.')}`;
 
   return (
