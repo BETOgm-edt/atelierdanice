@@ -1,27 +1,25 @@
 import React, { useState } from 'react';
 import { MessageCircle, X } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
+import { buildWhatsAppLink } from '../../core/utils';
 
 export const WhatsAppFloatingButton = ({ contextProductName = null, contextProductSKU = null }) => {
   const { settings } = useStore();
   const [isOpen, setIsOpen] = useState(false);
 
-  const rawPhone = import.meta.env.VITE_WHATSAPP_PHONE || settings?.store?.whatsapp || '5511999998888';
-  const phone = rawPhone.replace(/\D/g, '');
-
   const defaultMsg = contextProductName
     ? `Olá! Tenho interesse no vestido ${contextProductName}${contextProductSKU ? ` (Ref: ${contextProductSKU})` : ''} do Atelier Nice e gostaria de agendar uma prova ou saber mais informações.`
     : (settings?.store?.whatsappDefaultMessage || 'Olá! Gostaria de falar com uma consultora do Atelier Nice sobre vestidos de festa e noivas.');
 
-  const encodedMsg = encodeURIComponent(defaultMsg);
-  const waUrl = `https://wa.me/${phone}?text=${encodedMsg}`;
+  const waUrl = buildWhatsAppLink({ customText: defaultMsg });
 
   return (
     <div
+      className="whatsapp-floating-container"
       style={{
         position: 'fixed',
-        bottom: '2rem',
-        left: '2rem',
+        bottom: 'calc(1.75rem + var(--safe-area-bottom))',
+        left: '1.75rem',
         zIndex: 850,
         display: 'flex',
         flexDirection: 'column',
@@ -120,6 +118,22 @@ export const WhatsAppFloatingButton = ({ contextProductName = null, contextProdu
       >
         <MessageCircle size={28} />
       </button>
+      <style>{`
+        @media (max-width: 768px) {
+          .whatsapp-floating-container {
+            bottom: calc(1rem + var(--safe-area-bottom)) !important;
+            left: 1rem !important;
+          }
+          .whatsapp-floating-container button {
+            width: 48px !important;
+            height: 48px !important;
+          }
+          .whatsapp-floating-container button svg {
+            width: 24px !important;
+            height: 24px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   Package,
@@ -26,6 +26,18 @@ export const AdminLayout = ({ activeTab, onSelectTab, onNavigateToStore, childre
   const { products, settings } = useStore();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
+  // Lock scroll when mobile drawer is open
+  useEffect(() => {
+    if (isMobileSidebarOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileSidebarOpen]);
+
   const lowStockCount = products.filter(p => p.stock <= (p.minStockAlert || 1)).length;
 
   const menuItems = [
@@ -46,6 +58,21 @@ export const AdminLayout = ({ activeTab, onSelectTab, onNavigateToStore, childre
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#F3D8CF' }}>
+      {/* Backdrop for mobile drawer */}
+      {isMobileSidebarOpen && (
+        <div
+          className="admin-backdrop"
+          onClick={() => setIsMobileSidebarOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(41, 22, 19, 0.7)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 940
+          }}
+        />
+      )}
+
       {/* Sidebar Desktop & Mobile */}
       <aside
         style={{
@@ -61,7 +88,8 @@ export const AdminLayout = ({ activeTab, onSelectTab, onNavigateToStore, childre
           left: 0,
           zIndex: 950,
           transition: 'transform var(--transition-normal)',
-          borderRight: '1px solid rgba(243,216,207,0.15)'
+          borderRight: '1px solid rgba(243,216,207,0.15)',
+          overflowY: 'auto'
         }}
         className={`admin-sidebar ${isMobileSidebarOpen ? 'open' : ''}`}
       >
@@ -69,7 +97,7 @@ export const AdminLayout = ({ activeTab, onSelectTab, onNavigateToStore, childre
           {/* Brand Logo in Admin */}
           <div
             style={{
-              padding: '1.75rem 1.5rem',
+              padding: '1.5rem 1.25rem',
               borderBottom: '1px solid rgba(243,216,207,0.15)',
               display: 'flex',
               alignItems: 'center',
@@ -77,27 +105,28 @@ export const AdminLayout = ({ activeTab, onSelectTab, onNavigateToStore, childre
             }}
           >
             <div>
-              <LuxuryLogo height={72} color="#F3D8CF" />
+              <LuxuryLogo height={64} color="#F3D8CF" />
             </div>
             <button
               className="btn-ghost mobile-close-btn"
               onClick={() => setIsMobileSidebarOpen(false)}
-              style={{ color: '#FFFFFF', display: 'none' }}
+              style={{ color: '#FFFFFF', display: 'none', padding: '0.4rem' }}
+              aria-label="Fechar menu"
             >
-              <X size={20} />
+              <X size={22} />
             </button>
           </div>
 
           {/* Admin Role Tag */}
           <div
             style={{
-              padding: '0.85rem 1.5rem',
+              padding: '0.75rem 1.25rem',
               backgroundColor: 'rgba(255,255,255,0.03)',
               borderBottom: '1px solid rgba(255,255,255,0.06)',
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
-              fontSize: '0.75rem',
+              fontSize: '0.72rem',
               color: 'var(--color-primary-light)'
             }}
           >
@@ -106,7 +135,7 @@ export const AdminLayout = ({ activeTab, onSelectTab, onNavigateToStore, childre
           </div>
 
           {/* Navigation Links */}
-          <nav style={{ padding: '1rem 0.75rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+          <nav style={{ padding: '0.85rem 0.65rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -118,15 +147,16 @@ export const AdminLayout = ({ activeTab, onSelectTab, onNavigateToStore, childre
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '0.75rem 1rem',
+                    padding: '0.75rem 0.9rem',
                     borderRadius: 'var(--radius-md)',
-                    fontSize: '0.9rem',
+                    fontSize: '0.88rem',
                     fontWeight: isActive ? 600 : 400,
                     backgroundColor: isActive ? 'var(--color-primary)' : 'transparent',
                     color: isActive ? '#FFFFFF' : '#C7AFA7',
                     transition: 'all var(--transition-fast)',
                     cursor: 'pointer',
-                    textAlign: 'left'
+                    textAlign: 'left',
+                    minHeight: '44px'
                   }}
                   className="admin-nav-item"
                 >
@@ -170,7 +200,7 @@ export const AdminLayout = ({ activeTab, onSelectTab, onNavigateToStore, childre
         </div>
 
         {/* Sidebar Footer */}
-        <div style={{ padding: '1.25rem', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div style={{ padding: '1.25rem 1rem', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
           <button
             onClick={onNavigateToStore}
             style={{
@@ -183,7 +213,8 @@ export const AdminLayout = ({ activeTab, onSelectTab, onNavigateToStore, childre
               color: '#F4E3DC',
               backgroundColor: 'rgba(255,255,255,0.06)',
               transition: 'all var(--transition-fast)',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              minHeight: '40px'
             }}
           >
             <ExternalLink size={16} color="var(--color-primary-light)" />
@@ -201,7 +232,8 @@ export const AdminLayout = ({ activeTab, onSelectTab, onNavigateToStore, childre
               fontSize: '0.84rem',
               color: 'var(--color-danger-border)',
               backgroundColor: 'transparent',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              minHeight: '40px'
             }}
           >
             <LogOut size={16} />
@@ -223,6 +255,7 @@ export const AdminLayout = ({ activeTab, onSelectTab, onNavigateToStore, childre
       >
         {/* Top Navbar */}
         <header
+          className="admin-navbar-header"
           style={{
             height: 'var(--admin-header-height)',
             backgroundColor: 'var(--color-bg-card)',
@@ -236,16 +269,17 @@ export const AdminLayout = ({ activeTab, onSelectTab, onNavigateToStore, childre
             zIndex: 800
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <button
               onClick={() => setIsMobileSidebarOpen(true)}
               className="btn-ghost mobile-menu-btn"
-              style={{ display: 'none', padding: '4px' }}
+              style={{ display: 'none', padding: '6px', minHeight: '40px', minWidth: '40px', borderRadius: 'var(--radius-sm)' }}
+              aria-label="Abrir menu"
             >
               <Menu size={22} />
             </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
               <span>Painel</span>
               <ChevronRight size={14} />
               <strong style={{ color: 'var(--color-text-main)', textTransform: 'capitalize' }}>
@@ -254,30 +288,49 @@ export const AdminLayout = ({ activeTab, onSelectTab, onNavigateToStore, childre
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
             {/* Store Switch */}
             <button
               onClick={onNavigateToStore}
-              className="btn btn-outline btn-sm"
-              style={{ fontSize: '0.82rem' }}
+              className="btn btn-outline btn-sm admin-store-btn"
+              style={{ fontSize: '0.82rem', padding: '0.45rem 0.8rem', minHeight: '38px' }}
             >
               <ExternalLink size={14} />
-              <span>Acessar Loja</span>
+              <span className="admin-store-btn-text">Ver Loja</span>
             </button>
 
             {/* User Profile */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <img
-                src={adminUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}
-                alt="Gestor"
-                style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--color-border)' }}
-              />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              {adminUser?.avatar ? (
+                <img
+                  src={adminUser.avatar}
+                  alt="Gestor"
+                  style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--color-border)' }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--color-primary)',
+                    color: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 700,
+                    fontSize: '0.85rem'
+                  }}
+                >
+                  {(adminUser?.name || 'A')[0].toUpperCase()}
+                </div>
+              )}
               <div style={{ display: 'flex', flexDirection: 'column' }} className="admin-user-details">
-                <strong style={{ fontSize: '0.88rem', color: 'var(--color-text-main)' }}>
-                  {adminUser?.name || 'Nice — Diretora'}
+                <strong style={{ fontSize: '0.85rem', color: 'var(--color-text-main)' }}>
+                  {adminUser?.name || 'Administração'}
                 </strong>
-                <span style={{ fontSize: '0.72rem', color: 'var(--color-primary)', fontWeight: 600 }}>
-                  Administradora Master
+                <span style={{ fontSize: '0.7rem', color: 'var(--color-primary)', fontWeight: 600 }}>
+                  Gestão Atelier Nice
                 </span>
               </div>
             </div>
@@ -285,7 +338,7 @@ export const AdminLayout = ({ activeTab, onSelectTab, onNavigateToStore, childre
         </header>
 
         {/* Content Body */}
-        <main style={{ padding: '2rem', flex: 1 }}>
+        <main className="admin-main-content" style={{ padding: '2rem', flex: 1 }}>
           {children}
         </main>
       </div>
@@ -294,12 +347,17 @@ export const AdminLayout = ({ activeTab, onSelectTab, onNavigateToStore, childre
         @media (max-width: 900px) {
           .admin-sidebar {
             transform: translateX(-100%);
+            box-shadow: 0 0 30px rgba(0,0,0,0.3);
           }
           .admin-sidebar.open {
             transform: translateX(0);
           }
           .admin-main-wrapper {
             margin-left: 0 !important;
+          }
+          .admin-navbar-header {
+            height: var(--admin-header-height-mobile) !important;
+            padding: 0 1rem !important;
           }
           .mobile-menu-btn {
             display: inline-flex !important;
@@ -309,6 +367,17 @@ export const AdminLayout = ({ activeTab, onSelectTab, onNavigateToStore, childre
           }
           .admin-user-details {
             display: none !important;
+          }
+          .admin-main-content {
+            padding: 1rem 0.85rem !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .admin-store-btn-text {
+            display: none;
+          }
+          .admin-store-btn {
+            padding: 0.45rem 0.6rem !important;
           }
         }
         .admin-nav-item:hover {

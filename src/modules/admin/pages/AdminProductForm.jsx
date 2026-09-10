@@ -60,25 +60,17 @@ export const AdminProductForm = ({ editingProduct = null, onCancel, onSuccess, o
       name: '',
       slug: '',
       sku: '',
-      categoryId: categories[0]?.id || 'cat-festa-gala',
-      categoryName: categories[0]?.name || 'Vestidos de Festa & Gala',
+      categoryId: categories[0]?.id || '',
+      categoryName: categories[0]?.name || '',
       shortDescription: '',
       description: '',
-      images: [
-        {
-          id: 'img-seed-1',
-          url: 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?auto=format&fit=crop&w=1000&q=85',
-          alt: 'Foto Principal',
-          isPrimary: true,
-          order: 0
-        }
-      ],
+      images: [],
       price: '',
       promotionalPrice: '',
       rentalPrice: '',
       costPrice: '',
       modality: 'both', // 'sale' | 'rent' | 'both'
-      stock: 4,
+      stock: 0,
       minStockAlert: 1,
       variants: [
         {
@@ -380,11 +372,12 @@ export const AdminProductForm = ({ editingProduct = null, onCancel, onSuccess, o
 
       {/* 8-Step Wizard Progress Bar */}
       <div
+        className="wizard-steps-container"
         style={{
           backgroundColor: 'var(--color-bg-card)',
           borderRadius: 'var(--radius-xl)',
           border: '1px solid var(--color-border)',
-          padding: '1.25rem 1.5rem',
+          padding: '1rem 1.25rem',
           boxShadow: 'var(--shadow-xs)'
         }}
       >
@@ -458,6 +451,7 @@ export const AdminProductForm = ({ editingProduct = null, onCancel, onSuccess, o
 
       {/* Step Form Box */}
       <div
+        className="admin-form-box"
         style={{
           backgroundColor: 'var(--color-bg-card)',
           borderRadius: 'var(--radius-xl)',
@@ -1377,11 +1371,32 @@ export const AdminProductForm = ({ editingProduct = null, onCancel, onSuccess, o
                 marginBottom: '2rem'
               }}
             >
-              <img
-                src={formData.images?.[0]?.url || 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?auto=format&fit=crop&w=400&q=80'}
-                alt={formData.name}
-                style={{ width: '100%', height: '240px', objectFit: 'cover', borderRadius: 'var(--radius-md)' }}
-              />
+              {formData.images?.[0]?.url && !formData.images[0].url.includes('unsplash') ? (
+                <img
+                  src={formData.images[0].url}
+                  alt={formData.name}
+                  style={{ width: '100%', height: '240px', objectFit: 'cover', borderRadius: 'var(--radius-md)' }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: '100%',
+                    height: '240px',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: 'var(--color-bg-subtle)',
+                    border: '1px solid var(--color-border)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--color-primary)',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <Sparkles size={28} />
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Sem foto cadastrada</span>
+                </div>
+              )}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div>
@@ -1496,9 +1511,28 @@ export const AdminProductForm = ({ editingProduct = null, onCancel, onSuccess, o
       </div>
 
       <style>{`
-        @media (max-width: 800px) {
+        @media (max-width: 900px) {
+          .wizard-steps-container {
+            padding: 0.75rem !important;
+          }
           .wizard-steps-grid {
-            grid-template-columns: repeat(4, 1fr) !important;
+            display: flex !important;
+            overflow-x: auto !important;
+            gap: 0.5rem !important;
+            padding-bottom: 0.35rem !important;
+            -webkit-overflow-scrolling: touch !important;
+          }
+          .wizard-steps-grid button {
+            flex: 0 0 auto !important;
+            min-width: 76px !important;
+          }
+          .admin-form-box {
+            padding: 1.25rem 1rem !important;
+          }
+        }
+        @media (max-width: 640px) {
+          .admin-form-box h3 {
+            font-size: 1.3rem !important;
           }
         }
       `}</style>

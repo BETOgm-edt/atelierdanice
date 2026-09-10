@@ -291,8 +291,9 @@ export const AdminProductsList = ({ onNewProduct, onEditProduct, onPreviewProduc
         )}
       </div>
 
-      {/* Main Data Table */}
+      {/* Main Data Container: Desktop Table + Mobile Cards */}
       <div
+        className="admin-products-table-wrapper"
         style={{
           backgroundColor: 'var(--color-bg-card)',
           borderRadius: 'var(--radius-xl)',
@@ -301,7 +302,8 @@ export const AdminProductsList = ({ onNewProduct, onEditProduct, onPreviewProduc
           overflow: 'hidden'
         }}
       >
-        <div style={{ overflowX: 'auto' }}>
+        {/* Desktop Table View (Hidden on mobile) */}
+        <div className="admin-desktop-table" style={{ overflowX: 'auto' }}>
           <table>
             <thead style={{ backgroundColor: 'var(--color-bg-surface)', borderBottom: '1px solid var(--color-border)' }}>
               <tr>
@@ -346,7 +348,7 @@ export const AdminProductsList = ({ onNewProduct, onEditProduct, onPreviewProduc
                 </tr>
               ) : (
                 filteredProducts.map((p) => {
-                  const img = p.images?.[0]?.url || 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?auto=format&fit=crop&w=150&q=80';
+                  const img = p.images?.[0]?.url;
                   const isChecked = selectedIds.includes(p.id);
 
                   return (
@@ -372,18 +374,36 @@ export const AdminProductsList = ({ onNewProduct, onEditProduct, onPreviewProduc
                       {/* Product details */}
                       <td style={{ padding: '1rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                          <img
-                            src={img}
-                            alt={p.name}
-                            style={{
-                              width: 48,
-                              height: 64,
-                              objectFit: 'cover',
-                              borderRadius: 'var(--radius-xs)',
-                              backgroundColor: 'var(--color-bg-subtle)',
-                              border: '1px solid var(--color-border-subtle)'
-                            }}
-                          />
+                          {img && !img.includes('unsplash') ? (
+                            <img
+                              src={img}
+                              alt={p.name}
+                              style={{
+                                width: 48,
+                                height: 64,
+                                objectFit: 'cover',
+                                borderRadius: 'var(--radius-xs)',
+                                backgroundColor: 'var(--color-bg-subtle)',
+                                border: '1px solid var(--color-border-subtle)'
+                              }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: 48,
+                                height: 64,
+                                borderRadius: 'var(--radius-xs)',
+                                backgroundColor: 'var(--color-bg-subtle)',
+                                border: '1px solid var(--color-border-subtle)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'var(--color-primary)'
+                              }}
+                            >
+                              <Sparkles size={18} />
+                            </div>
+                          )}
                           <div>
                             <strong
                               style={{
@@ -397,7 +417,7 @@ export const AdminProductsList = ({ onNewProduct, onEditProduct, onPreviewProduc
                               {p.name}
                             </strong>
                             <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                              SKU: {p.sku} {p.featured && '• ⭐ Destaque'}
+                              SKU: {p.sku || 'N/A'} {p.featured && '• ⭐ Destaque'}
                             </span>
                           </div>
                         </div>
@@ -493,6 +513,154 @@ export const AdminProductsList = ({ onNewProduct, onEditProduct, onPreviewProduc
             </tbody>
           </table>
         </div>
+
+        {/* Mobile Luxury Cards List View (Shown <= 768px) */}
+        <div className="admin-mobile-cards" style={{ display: 'none', flexDirection: 'column' }}>
+          {filteredProducts.length === 0 ? (
+            <div style={{ padding: '2.5rem 1.5rem', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+              Nenhum vestido encontrado com os filtros atuais.
+            </div>
+          ) : (
+            filteredProducts.map((p) => {
+              const img = p.images?.[0]?.url;
+              const isChecked = selectedIds.includes(p.id);
+
+              return (
+                <div
+                  key={p.id}
+                  style={{
+                    padding: '1rem',
+                    borderBottom: '1px solid var(--color-border-subtle)',
+                    backgroundColor: isChecked ? 'var(--color-bg-subtle)' : 'transparent',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.75rem'
+                  }}
+                >
+                  {/* Top card row */}
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => handleSelectOne(p.id)}
+                      style={{ accentColor: 'var(--color-primary)', marginTop: '4px', width: 18, height: 18 }}
+                    />
+                    {img && !img.includes('unsplash') ? (
+                      <img
+                        src={img}
+                        alt={p.name}
+                        style={{
+                          width: 54,
+                          height: 72,
+                          objectFit: 'cover',
+                          borderRadius: 'var(--radius-sm)',
+                          backgroundColor: 'var(--color-bg-subtle)',
+                          border: '1px solid var(--color-border-subtle)',
+                          flexShrink: 0
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 54,
+                          height: 72,
+                          borderRadius: 'var(--radius-sm)',
+                          backgroundColor: 'var(--color-bg-subtle)',
+                          border: '1px solid var(--color-border-subtle)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'var(--color-primary)',
+                          flexShrink: 0
+                        }}
+                      >
+                        <Sparkles size={18} />
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--color-primary)', fontWeight: 600, textTransform: 'uppercase' }}>
+                          {p.categoryName}
+                        </span>
+                        <StatusBadge status={p.status} size="sm" />
+                      </div>
+
+                      <strong
+                        style={{
+                          fontSize: '0.95rem',
+                          color: 'var(--color-text-main)',
+                          display: 'block',
+                          lineHeight: 1.25,
+                          marginBottom: '0.3rem'
+                        }}
+                        onClick={() => onEditProduct(p)}
+                      >
+                        {p.name}
+                      </strong>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', fontSize: '0.78rem' }}>
+                        <span style={{ color: 'var(--color-text-muted)' }}>SKU: {p.sku}</span>
+                        <span style={{ color: 'var(--color-text-main)', fontWeight: 600 }}>
+                          Estoque: <strong style={{ color: p.stock <= (p.minStockAlert || 1) ? 'var(--color-danger)' : 'var(--color-text-main)' }}>{p.stock}</strong>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pricing row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.6rem', backgroundColor: 'var(--color-bg-surface)', borderRadius: 'var(--radius-sm)' }}>
+                    <div style={{ fontSize: '0.82rem' }}>
+                      <span style={{ color: 'var(--color-text-muted)' }}>Venda: </span>
+                      <strong style={{ color: 'var(--color-primary)' }}>{formatCurrency(p.promotionalPrice || p.price)}</strong>
+                    </div>
+                    {p.rentalPrice && (
+                      <div style={{ fontSize: '0.82rem' }}>
+                        <span style={{ color: 'var(--color-text-muted)' }}>Aluguel: </span>
+                        <strong>{formatCurrency(p.rentalPrice)}</strong>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Mobile Actions Buttons */}
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                    <button
+                      onClick={() => onEditProduct(p)}
+                      className="btn btn-secondary btn-sm"
+                      style={{ flex: 1, minHeight: '38px', fontSize: '0.8rem', justifyContent: 'center' }}
+                    >
+                      <Edit2 size={14} />
+                      <span>Editar</span>
+                    </button>
+                    <button
+                      onClick={() => onPreviewProduct(p)}
+                      className="btn btn-outline btn-sm"
+                      style={{ minHeight: '38px', padding: '0 0.75rem' }}
+                      title="Ver na Loja"
+                    >
+                      <Eye size={14} />
+                    </button>
+                    <button
+                      onClick={() => handleDuplicate(p.id)}
+                      className="btn btn-outline btn-sm"
+                      style={{ minHeight: '38px', padding: '0 0.75rem' }}
+                      title="Duplicar"
+                    >
+                      <Copy size={14} />
+                    </button>
+                    <button
+                      onClick={() => setProductToDelete(p)}
+                      className="btn-icon"
+                      style={{ minHeight: '38px', minWidth: '38px', color: 'var(--color-danger)', borderColor: 'var(--color-danger-border)' }}
+                      title="Excluir"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
 
       {/* Individual Delete Modal */}
@@ -520,6 +688,14 @@ export const AdminProductsList = ({ onNewProduct, onEditProduct, onPreviewProduc
       <style>{`
         .admin-table-row:hover {
           background-color: var(--color-bg-surface) !important;
+        }
+        @media (max-width: 768px) {
+          .admin-desktop-table {
+            display: none !important;
+          }
+          .admin-mobile-cards {
+            display: flex !important;
+          }
         }
       `}</style>
     </div>

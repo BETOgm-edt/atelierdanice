@@ -16,8 +16,6 @@ export const CartProvider = ({ children }) => {
   });
 
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [shippingCost, setShippingCost] = useState(0);
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
 
   useEffect(() => {
     try {
@@ -31,8 +29,8 @@ export const CartProvider = ({ children }) => {
     if (!product) return;
 
     const unitPrice = modality === 'rent'
-      ? (product.rentalPrice || product.price * 0.35)
-      : (product.promotionalPrice || product.price);
+      ? (product.rentalPrice || 0)
+      : (product.promotionalPrice || product.price || 0);
 
     const variantKey = selectedVariant ? `${selectedVariant.size}-${selectedVariant.color?.name || ''}` : 'default';
     const cartItemId = `${product.id}-${variantKey}-${modality}`;
@@ -52,7 +50,7 @@ export const CartProvider = ({ children }) => {
         sku: selectedVariant?.sku || product.sku,
         image: product.images?.[0]?.url || '',
         price: unitPrice,
-        originalPrice: product.price,
+        originalPrice: product.price || 0,
         modality, // 'buy' or 'rent'
         variant: selectedVariant || { size: 'Padrão', color: { name: 'Padrão', hex: '#B67068' } },
         quantity
@@ -60,7 +58,7 @@ export const CartProvider = ({ children }) => {
       setCart((prev) => [newItem, ...prev]);
     }
 
-    showToast(`"${product.name}" adicionado à sua sacola!`, 'success');
+    showToast(`"${product.name}" adicionado à sua seleção!`, 'success');
     setIsCartOpen(true);
   };
 
@@ -78,7 +76,7 @@ export const CartProvider = ({ children }) => {
     const item = cart.find((i) => i.cartItemId === cartItemId);
     setCart((prev) => prev.filter((i) => i.cartItemId !== cartItemId));
     if (item) {
-      showToast(`"${item.name}" removido da sacola.`, 'info');
+      showToast(`"${item.name}" removido da seleção.`, 'info');
     }
   };
 
@@ -86,34 +84,13 @@ export const CartProvider = ({ children }) => {
     setCart([]);
   };
 
-  const applyCoupon = (code) => {
-    const clean = (code || '').trim().toUpperCase();
-    if (clean === 'PRIMEIRACOMPRA' || clean === 'NICE10') {
-      setAppliedCoupon({ code: clean, discountPercent: 10 });
-      showToast('Cupom de 10% de desconto aplicado com sucesso!', 'success');
-      return true;
-    }
-    showToast('Cupom inválido ou expirado.', 'error');
-    return false;
-  };
-
-  const removeCoupon = () => {
-    setAppliedCoupon(null);
-    showToast('Cupom removido.', 'info');
-  };
-
   const subtotal = useMemo(() => {
-    return cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    return cart.reduce((acc, item) => acc + (item.price || 0) * item.quantity, 0);
   }, [cart]);
 
-  const discountAmount = useMemo(() => {
-    if (!appliedCoupon) return 0;
-    return (subtotal * appliedCoupon.discountPercent) / 100;
-  }, [subtotal, appliedCoupon]);
-
   const total = useMemo(() => {
-    return Math.max(0, subtotal - discountAmount + shippingCost);
-  }, [subtotal, discountAmount, shippingCost]);
+    return subtotal;
+  }, [subtotal]);
 
   const cartCount = useMemo(() => {
     return cart.reduce((acc, item) => acc + item.quantity, 0);
@@ -128,16 +105,10 @@ export const CartProvider = ({ children }) => {
         removeFromCart,
         clearCart,
         subtotal,
-        discountAmount,
-        shippingCost,
-        setShippingCost,
         total,
         cartCount,
         isCartOpen,
-        setIsCartOpen,
-        appliedCoupon,
-        applyCoupon,
-        removeCoupon
+        setIsCartOpen
       }}
     >
       {children}

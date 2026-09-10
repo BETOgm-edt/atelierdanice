@@ -10,7 +10,6 @@ import { ContactPage } from './pages/public/ContactPage';
 import { CartDrawer } from './components/public/CartDrawer';
 import { WishlistDrawer } from './components/public/WishlistDrawer';
 import { QuickSearchModal } from './components/public/QuickSearchModal';
-import { CheckoutModal } from './components/public/CheckoutModal';
 import { WhatsAppFloatingButton } from './components/public/WhatsAppFloatingButton';
 
 import { AdminLayout } from './modules/admin/AdminLayout';
@@ -44,7 +43,6 @@ export function App() {
 
   // Modals State
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   // Sync route with browser history
   useEffect(() => {
@@ -54,6 +52,17 @@ export function App() {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
+  // Sync active product when navigating directly or refreshing on /vestidos/:id
+  useEffect(() => {
+    if (currentRoute.startsWith('/vestidos/') && products.length > 0) {
+      const slugOrId = currentRoute.replace('/vestidos/', '').split('?')[0];
+      const found = products.find(p => p.slug === slugOrId || String(p.id) === slugOrId);
+      if (found && (!activeProduct || activeProduct.id !== found.id)) {
+        setActiveProduct(found);
+      }
+    }
+  }, [currentRoute, products, activeProduct]);
 
   const navigate = (route) => {
     window.history.pushState({}, '', route);
@@ -213,7 +222,6 @@ export function App() {
 
       {/* Global Interactive Drawers & Modals */}
       <CartDrawer
-        onProceedToCheckout={() => setIsCheckoutOpen(true)}
         onExploreCatalog={() => navigate('/produtos')}
       />
 
@@ -227,14 +235,6 @@ export function App() {
         onClose={() => setIsSearchOpen(false)}
         onSelectProduct={handleSelectProduct}
         onExploreAll={(term) => navigate(`/produtos?busca=${encodeURIComponent(term)}`)}
-      />
-
-      <CheckoutModal
-        isOpen={isCheckoutOpen}
-        onClose={() => setIsCheckoutOpen(false)}
-        onOrderCompleted={(order) => {
-          // Stay on order confirmation view inside modal
-        }}
       />
 
       {/* Contextual WhatsApp Floating CTA */}

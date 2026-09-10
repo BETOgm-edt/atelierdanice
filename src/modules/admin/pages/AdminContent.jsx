@@ -12,9 +12,9 @@ export const AdminContent = () => {
     return banners?.[0] || {
       id: 'banner-hero-1',
       title: 'A Nobreza da Alta Costura Feminina',
-      subtitle: 'COLEÇÃO GALA & NOIVAS 2026',
-      description: 'Criações exclusivas em Zibeline, seda pura e rendas francesas. Peças autorais desenhadas para vestir sua essência nos momentos mais inesquecíveis.',
-      imageUrl: 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?auto=format&fit=crop&w=1600&q=90'
+      subtitle: 'COLEÇÃO ATELIER NICE',
+      description: 'Criações exclusivas em Zibeline, seda pura e rendas nobres. Peças autorais desenhadas para vestir sua essência nos momentos mais inesquecíveis.',
+      imageUrl: ''
     };
   });
 

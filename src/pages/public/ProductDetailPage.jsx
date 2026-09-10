@@ -1,20 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, ShoppingBag, MessageCircle, ChevronRight, Check, Shield, Scissors, Sparkles, Truck, ZoomIn } from 'lucide-react';
-import { formatCurrency, calculateDiscount } from '../../core/utils';
-import { useCart } from '../../context/CartContext';
+import { Heart, MessageCircle, ChevronRight, Check, Shield, Scissors, Sparkles, ZoomIn } from 'lucide-react';
+import { formatCurrency, calculateDiscount, buildProductWhatsAppMessage, buildWhatsAppLink } from '../../core/utils';
 import { useWishlist } from '../../context/WishlistContext';
 import { useStore } from '../../context/StoreContext';
 import { ProductCard } from '../../components/public/ProductCard';
 import { StatusBadge } from '../../components/common/StatusBadge';
+import { NeutralImagePlaceholder } from '../../components/common/NeutralImagePlaceholder';
 
 export const ProductDetailPage = ({ product, onNavigate, onSelectProduct }) => {
-  const { addToCart } = useCart();
   const { isWishlisted, toggleWishlist } = useWishlist();
-  const { products, settings } = useStore();
+  const { products } = useStore();
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [selectedSize, setSelectedSize] = useState(product?.variants?.[0]?.size || 'P (38)');
-  const [selectedColor, setSelectedColor] = useState(product?.variants?.[0]?.color?.name || 'Rosé Atelier');
+  const [selectedSize, setSelectedSize] = useState(product?.variants?.[0]?.size || '');
+  const [selectedColor, setSelectedColor] = useState(product?.variants?.[0]?.color?.name || '');
   const [selectedModality, setSelectedModality] = useState(product?.modality === 'rent' ? 'rent' : 'buy');
   const [activeTab, setActiveTab] = useState('details'); // 'details' | 'specs' | 'sizes' | 'shipping'
   const [isZoomOpen, setIsZoomOpen] = useState(false);
@@ -23,8 +22,11 @@ export const ProductDetailPage = ({ product, onNavigate, onSelectProduct }) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setActiveImageIndex(0);
     if (product?.variants?.[0]) {
-      setSelectedSize(product.variants[0].size);
-      setSelectedColor(product.variants[0].color?.name || 'Padrão');
+      setSelectedSize(product.variants[0].size || '');
+      setSelectedColor(product.variants[0].color?.name || '');
+    } else {
+      setSelectedSize('');
+      setSelectedColor('');
     }
     setSelectedModality(product?.modality === 'rent' ? 'rent' : 'buy');
   }, [product]);
@@ -34,46 +36,37 @@ export const ProductDetailPage = ({ product, onNavigate, onSelectProduct }) => {
   const isFavorited = isWishlisted(product.id);
   const images = Array.isArray(product.images) && product.images.length > 0
     ? product.images
-    : [{ url: 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?auto=format&fit=crop&w=800&q=80', alt: product.name }];
+    : [];
 
-  const currentImage = images[activeImageIndex] || images[0];
+  const currentImage = images[activeImageIndex] || images[0] || null;
   const discount = calculateDiscount(product.price, product.promotionalPrice);
-  const isOutOfStock = product.status === 'out_of_stock' || product.stock <= 0;
+  const isOutOfStock = product.status === 'out_of_stock' || (product.stock !== undefined && product.stock <= 0);
 
   // Selected variant finder
   const currentVariant = product.variants?.find(
-    (v) => v.size === selectedSize && (v.color?.name === selectedColor || !v.color)
+    (v) => (selectedSize ? v.size === selectedSize : true) && (selectedColor ? (v.color?.name === selectedColor || !v.color) : true)
   ) || product.variants?.[0];
 
   const currentPrice = selectedModality === 'rent'
-    ? (product.rentalPrice || product.price * 0.35)
+    ? product.rentalPrice
     : (product.promotionalPrice || product.price);
 
-  // WhatsApp Direct Consultation Link
-  const rawPhone = import.meta.env.VITE_WHATSAPP_PHONE || settings?.store?.whatsapp || '5511999998888';
-  const phone = rawPhone.replace(/\D/g, '');
-  const modalityLabel = selectedModality === 'rent' ? 'Aluguel' : 'Compra';
-  const priceFormatted = formatCurrency(currentPrice);
-  const waMessage = `Olá! Gostaria de saber mais sobre este vestido:
+  // WhatsApp Dynamic Link with Real Product Data
+  const waMessage = buildProductWhatsAppMessage({
+    name: product.name,
+    sku: currentVariant?.sku || product.sku,
+    modality: product.modality === 'both' ? selectedModality : product.modality,
+    size: selectedSize,
+    color: selectedColor,
+    price: currentPrice
+  });
 
-Vestido: ${product.name}
-SKU: ${currentVariant?.sku || product.sku}
-Modalidade: ${modalityLabel}
-Preço: ${priceFormatted}
-
-Gostaria de verificar disponibilidade.`;
-
-  const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(waMessage)}`;
+  const waUrl = buildWhatsAppLink(waMessage);
 
   // Related products
   const relatedProducts = products
     .filter((p) => (p.status === 'published' || p.status === 'out_of_stock') && p.id !== product.id && p.categoryId === product.categoryId)
     .slice(0, 3);
-
-  const handleAddToCart = () => {
-    if (isOutOfStock) return;
-    addToCart(product, currentVariant, selectedModality, 1);
-  };
 
   return (
     <div className="container" style={{ paddingBottom: '6rem' }}>
@@ -122,44 +115,52 @@ Gostaria de verificar disponibilidade.`;
               backgroundColor: '#F8E5DF',
               border: '1px solid var(--color-border)',
               boxShadow: 'var(--shadow-md)',
-              cursor: 'zoom-in'
+              cursor: currentImage?.url ? 'zoom-in' : 'default'
             }}
-            onClick={() => setIsZoomOpen(true)}
+            onClick={() => currentImage?.url && setIsZoomOpen(true)}
           >
-            <img
-              src={currentImage.url}
-              alt={currentImage.alt || product.name}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover'
-              }}
-            />
+            {currentImage?.url ? (
+              <>
+                <img
+                  src={currentImage.url}
+                  alt={currentImage.alt || product.name}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
+                  }}
+                />
 
-            <div
-              style={{
-                position: 'absolute',
-                bottom: '1rem',
-                right: '1rem',
-                backgroundColor: 'rgba(255,253,252,0.85)',
-                backdropFilter: 'blur(8px)',
-                padding: '0.4rem 0.75rem',
-                borderRadius: 'var(--radius-full)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                fontSize: '0.75rem',
-                color: 'var(--color-text-main)',
-                fontWeight: 600,
-                border: '1px solid var(--color-border)'
-              }}
-            >
-              <ZoomIn size={14} color="var(--color-primary)" />
-              <span>Ampliar Foto</span>
-            </div>
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '1rem',
+                    right: '1rem',
+                    backgroundColor: 'rgba(255,253,252,0.85)',
+                    backdropFilter: 'blur(8px)',
+                    padding: '0.4rem 0.75rem',
+                    borderRadius: 'var(--radius-full)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    fontSize: '0.75rem',
+                    color: 'var(--color-text-main)',
+                    fontWeight: 600,
+                    border: '1px solid var(--color-border)'
+                  }}
+                >
+                  <ZoomIn size={14} color="var(--color-primary)" />
+                  <span>Ampliar Foto</span>
+                </div>
+              </>
+            ) : (
+              <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+                <NeutralImagePlaceholder title={product.name} subtitle={product.categoryName || 'Alta Costura'} />
+              </div>
+            )}
           </div>
 
           {/* Thumbnails Row */}
@@ -200,9 +201,11 @@ Gostaria de verificar disponibilidade.`;
               <span className="badge badge-soft">
                 {product.categoryName}
               </span>
-              <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
-                SKU: <strong>{currentVariant?.sku || product.sku}</strong>
-              </span>
+              {product.sku && (
+                <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                  SKU: <strong>{currentVariant?.sku || product.sku}</strong>
+                </span>
+              )}
               {product.featured && <span className="badge badge-gold">Exclusividade Atelier</span>}
             </div>
 
@@ -219,9 +222,11 @@ Gostaria de verificar disponibilidade.`;
               {product.name}
             </h1>
 
-            <p style={{ fontSize: '0.95rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-              {product.shortDescription}
-            </p>
+            {product.shortDescription && (
+              <p style={{ fontSize: '0.95rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+                {product.shortDescription}
+              </p>
+            )}
           </div>
 
           {/* Pricing & Modality Selector */}
@@ -279,26 +284,34 @@ Gostaria de verificar disponibilidade.`;
               </span>
 
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem' }}>
-                <span
-                  style={{
-                    fontSize: '2rem',
-                    fontWeight: 700,
-                    color: 'var(--color-primary)',
-                    fontFamily: 'var(--font-sans)'
-                  }}
-                >
-                  {formatCurrency(currentPrice)}
-                </span>
-
-                {selectedModality === 'buy' && discount.hasDiscount && (
+                {currentPrice && currentPrice > 0 ? (
                   <>
-                    <span style={{ fontSize: '1.1rem', color: 'var(--color-text-muted)', textDecoration: 'line-through' }}>
-                      {formatCurrency(product.price)}
+                    <span
+                      style={{
+                        fontSize: '2rem',
+                        fontWeight: 700,
+                        color: 'var(--color-primary)',
+                        fontFamily: 'var(--font-sans)'
+                      }}
+                    >
+                      {formatCurrency(currentPrice)}
                     </span>
-                    <span className="badge badge-danger" style={{ backgroundColor: 'var(--color-primary)' }}>
-                      {discount.percentageFormatted}
-                    </span>
+
+                    {selectedModality === 'buy' && discount.hasDiscount && (
+                      <>
+                        <span style={{ fontSize: '1.1rem', color: 'var(--color-text-muted)', textDecoration: 'line-through' }}>
+                          {formatCurrency(product.price)}
+                        </span>
+                        <span className="badge badge-danger" style={{ backgroundColor: 'var(--color-primary)' }}>
+                          {discount.percentageFormatted}
+                        </span>
+                      </>
+                    )}
                   </>
+                ) : (
+                  <span style={{ fontSize: '1.4rem', fontWeight: 600, color: 'var(--color-text-main)' }}>
+                    Sob Consulta no Atelier
+                  </span>
                 )}
               </div>
             </div>
@@ -314,7 +327,7 @@ Gostaria de verificar disponibilidade.`;
                 }}
               />
               <span style={{ color: isOutOfStock ? 'var(--color-danger)' : 'var(--color-success)', fontWeight: 600 }}>
-                {isOutOfStock ? 'Esgotado / Sob Encomenda' : `Em Estoque no Atelier (${product.stock} unidades disponíveis)`}
+                {isOutOfStock ? 'Esgotado / Sob Encomenda' : 'Disponível no Atelier Nice'}
               </span>
             </div>
           </div>
@@ -323,7 +336,7 @@ Gostaria de verificar disponibilidade.`;
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
               <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-main)' }}>
-                Selecione o Tamanho: <strong>{selectedSize}</strong>
+                Tamanho da Peça: {selectedSize ? <strong>{selectedSize}</strong> : <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>Sob Medida</span>}
               </span>
               <button
                 onClick={() => setActiveTab('sizes')}
@@ -334,35 +347,38 @@ Gostaria de verificar disponibilidade.`;
             </div>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-              {(product.variants && product.variants.length > 0
-                ? Array.from(new Set(product.variants.map((v) => v.size)))
-                : ['PP (36)', 'P (38)', 'M (40)', 'G (42)', 'GG (44)', 'Sob Medida']
-              ).map((size) => {
-                const isSelected = selectedSize === size;
-                const sizeVariant = product.variants?.find((v) => v.size === size);
-                const hasStock = sizeVariant ? sizeVariant.stock > 0 : true;
+              {product.variants && product.variants.length > 0 ? (
+                Array.from(new Set(product.variants.map((v) => v.size))).map((size) => {
+                  const isSelected = selectedSize === size;
+                  const sizeVariant = product.variants?.find((v) => v.size === size);
+                  const hasStock = sizeVariant ? sizeVariant.stock > 0 : true;
 
-                return (
-                  <button
-                    key={size}
-                    onClick={() => setSelectedSize(size)}
-                    disabled={!hasStock}
-                    style={{
-                      padding: '0.6rem 1rem',
-                      borderRadius: 'var(--radius-md)',
-                      fontSize: '0.88rem',
-                      fontWeight: 600,
-                      border: `1.5px solid ${isSelected ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                      backgroundColor: isSelected ? 'var(--color-primary-subtle)' : 'var(--color-bg-card)',
-                      color: isSelected ? 'var(--color-primary)' : 'var(--color-text-main)',
-                      opacity: !hasStock ? 0.4 : 1,
-                      cursor: !hasStock ? 'not-allowed' : 'pointer'
-                    }}
-                  >
-                    {size}
-                  </button>
-                );
-              })}
+                  return (
+                    <button
+                      key={size}
+                      onClick={() => setSelectedSize(size)}
+                      disabled={!hasStock}
+                      style={{
+                        padding: '0.6rem 1rem',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '0.88rem',
+                        fontWeight: 600,
+                        border: `1.5px solid ${isSelected ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                        backgroundColor: isSelected ? 'var(--color-primary-subtle)' : 'var(--color-bg-card)',
+                        color: isSelected ? 'var(--color-primary)' : 'var(--color-text-main)',
+                        opacity: !hasStock ? 0.4 : 1,
+                        cursor: !hasStock ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      {size}
+                    </button>
+                  );
+                })
+              ) : (
+                <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', padding: '0.5rem 0.75rem', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-sm)' }}>
+                  Peça autoral com confecção e ajustes sob medida no Atelier.
+                </div>
+              )}
             </div>
           </div>
 
@@ -413,25 +429,39 @@ Gostaria de verificar disponibilidade.`;
             </div>
           )}
 
-          {/* Action CTAs */}
+          {/* Action CTAs — Direct WhatsApp Conversion */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button
-                onClick={handleAddToCart}
-                disabled={isOutOfStock}
+              <a
+                href={waUrl}
+                target="_blank"
+                rel="noreferrer"
                 className="btn btn-primary"
-                style={{ flex: 1, padding: '1rem' }}
+                style={{
+                  flex: 1,
+                  padding: '1.05rem',
+                  backgroundColor: '#25D366',
+                  borderColor: '#25D366',
+                  color: '#FFFFFF',
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  boxShadow: '0 4px 14px rgba(37,211,102,0.3)'
+                }}
               >
-                <ShoppingBag size={18} />
-                <span>Adicionar à Sacola</span>
-              </button>
+                <MessageCircle size={20} />
+                <span>Tenho Interesse via WhatsApp</span>
+              </a>
 
               <button
                 onClick={() => toggleWishlist(product)}
                 className="btn-icon"
                 style={{
-                  width: '52px',
-                  height: '52px',
+                  width: '54px',
+                  height: '54px',
                   backgroundColor: isFavorited ? 'var(--color-primary)' : 'var(--color-bg-card)',
                   color: isFavorited ? '#FFFFFF' : 'var(--color-text-main)',
                   borderColor: isFavorited ? 'var(--color-primary)' : 'var(--color-border)'
@@ -441,24 +471,6 @@ Gostaria de verificar disponibilidade.`;
                 <Heart size={20} fill={isFavorited ? '#FFFFFF' : 'none'} />
               </button>
             </div>
-
-            {/* WhatsApp Direct Appointment Button */}
-            <a
-              href={waUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="btn btn-secondary"
-              style={{
-                width: '100%',
-                padding: '0.9rem',
-                borderColor: '#25D366',
-                color: '#1E7E34',
-                backgroundColor: 'rgba(37,211,102,0.06)'
-              }}
-            >
-              <MessageCircle size={18} color="#25D366" />
-              <span>Tenho Interesse / Falar com Estilista</span>
-            </a>
           </div>
 
           {/* Trust Guarantees */}
@@ -552,49 +564,67 @@ Gostaria de verificar disponibilidade.`;
               <h4 style={{ fontFamily: 'var(--font-editorial)', fontSize: '1.4rem', color: 'var(--color-text-main)', marginBottom: '1.5rem' }}>
                 Ficha Técnica da Alta Costura
               </h4>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
-                <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-surface)', borderRadius: 'var(--radius-md)' }}>
-                  <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', fontWeight: 600 }}>Tecido Principal</span>
-                  <strong style={{ display: 'block', fontSize: '0.95rem', color: 'var(--color-text-main)', marginTop: '2px' }}>
-                    {product.characteristics?.fabric || 'Zibeline Nobre'}
-                  </strong>
-                </div>
+              {product.characteristics && Object.values(product.characteristics).some(v => Boolean(v)) ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
+                  {product.characteristics.fabric && (
+                    <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-surface)', borderRadius: 'var(--radius-md)' }}>
+                      <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', fontWeight: 600 }}>Tecido Principal</span>
+                      <strong style={{ display: 'block', fontSize: '0.95rem', color: 'var(--color-text-main)', marginTop: '2px' }}>
+                        {product.characteristics.fabric}
+                      </strong>
+                    </div>
+                  )}
 
-                <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-surface)', borderRadius: 'var(--radius-md)' }}>
-                  <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', fontWeight: 600 }}>Comprimento</span>
-                  <strong style={{ display: 'block', fontSize: '0.95rem', color: 'var(--color-text-main)', marginTop: '2px' }}>
-                    {product.characteristics?.length || 'Longo Gala'}
-                  </strong>
-                </div>
+                  {product.characteristics.length && (
+                    <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-surface)', borderRadius: 'var(--radius-md)' }}>
+                      <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', fontWeight: 600 }}>Comprimento</span>
+                      <strong style={{ display: 'block', fontSize: '0.95rem', color: 'var(--color-text-main)', marginTop: '2px' }}>
+                        {product.characteristics.length}
+                      </strong>
+                    </div>
+                  )}
 
-                <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-surface)', borderRadius: 'var(--radius-md)' }}>
-                  <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', fontWeight: 600 }}>Decote</span>
-                  <strong style={{ display: 'block', fontSize: '0.95rem', color: 'var(--color-text-main)', marginTop: '2px' }}>
-                    {product.characteristics?.neckline || 'Ombro a Ombro'}
-                  </strong>
-                </div>
+                  {product.characteristics.neckline && (
+                    <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-surface)', borderRadius: 'var(--radius-md)' }}>
+                      <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', fontWeight: 600 }}>Decote</span>
+                      <strong style={{ display: 'block', fontSize: '0.95rem', color: 'var(--color-text-main)', marginTop: '2px' }}>
+                        {product.characteristics.neckline}
+                      </strong>
+                    </div>
+                  )}
 
-                <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-surface)', borderRadius: 'var(--radius-md)' }}>
-                  <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', fontWeight: 600 }}>Modelagem</span>
-                  <strong style={{ display: 'block', fontSize: '0.95rem', color: 'var(--color-text-main)', marginTop: '2px' }}>
-                    {product.characteristics?.silhouette || 'Evasê Fluido'}
-                  </strong>
-                </div>
+                  {product.characteristics.silhouette && (
+                    <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-surface)', borderRadius: 'var(--radius-md)' }}>
+                      <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', fontWeight: 600 }}>Modelagem</span>
+                      <strong style={{ display: 'block', fontSize: '0.95rem', color: 'var(--color-text-main)', marginTop: '2px' }}>
+                        {product.characteristics.silhouette}
+                      </strong>
+                    </div>
+                  )}
 
-                <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-surface)', borderRadius: 'var(--radius-md)' }}>
-                  <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', fontWeight: 600 }}>Ocasião Sugerida</span>
-                  <strong style={{ display: 'block', fontSize: '0.95rem', color: 'var(--color-text-main)', marginTop: '2px' }}>
-                    {product.characteristics?.occasion || 'Gala, Madrinhas & Formatura'}
-                  </strong>
-                </div>
+                  {product.characteristics.occasion && (
+                    <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-surface)', borderRadius: 'var(--radius-md)' }}>
+                      <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', fontWeight: 600 }}>Ocasião Sugerida</span>
+                      <strong style={{ display: 'block', fontSize: '0.95rem', color: 'var(--color-text-main)', marginTop: '2px' }}>
+                        {product.characteristics.occasion}
+                      </strong>
+                    </div>
+                  )}
 
-                <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-surface)', borderRadius: 'var(--radius-md)' }}>
-                  <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', fontWeight: 600 }}>Estilo</span>
-                  <strong style={{ display: 'block', fontSize: '0.95rem', color: 'var(--color-text-main)', marginTop: '2px' }}>
-                    {product.characteristics?.style || 'Alta Costura Clássica'}
-                  </strong>
+                  {product.characteristics.style && (
+                    <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-surface)', borderRadius: 'var(--radius-md)' }}>
+                      <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', fontWeight: 600 }}>Estilo</span>
+                      <strong style={{ display: 'block', fontSize: '0.95rem', color: 'var(--color-text-main)', marginTop: '2px' }}>
+                        {product.characteristics.style}
+                      </strong>
+                    </div>
+                  )}
                 </div>
-              </div>
+              ) : (
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
+                  Peça autoral confeccionada sob medida. Consulte detalhes de modelagem, tecidos e caimento diretamente com nossa consultora no WhatsApp.
+                </p>
+              )}
             </div>
           )}
 
@@ -680,21 +710,22 @@ Gostaria de verificar disponibilidade.`;
 
       {/* Related Products Section */}
       {relatedProducts.length > 0 && (
-        <div>
-          <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+        <div style={{ marginTop: '2rem' }}>
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
             <span className="subtitle-editorial" style={{ marginBottom: '0.4rem', display: 'block' }}>
               Complemente sua Escolha
             </span>
-            <h2 className="heading-section">
+            <h2 className="heading-section" style={{ fontSize: 'clamp(1.6rem, 3vw, 2.2rem)' }}>
               Você Também Pode Amar
             </h2>
           </div>
 
           <div
+            className="product-related-grid"
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: '2rem'
+              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+              gap: '1.75rem'
             }}
           >
             {relatedProducts.map((p) => (
@@ -707,6 +738,65 @@ Gostaria de verificar disponibilidade.`;
           </div>
         </div>
       )}
+
+      {/* Sticky Mobile Bottom Bar */}
+      <div
+        className="product-mobile-bottom-bar"
+        style={{
+          display: 'none',
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: 'var(--color-bg-card)',
+          borderTop: '1px solid var(--color-border)',
+          padding: '0.75rem 1rem calc(0.75rem + var(--safe-area-bottom, 0px))',
+          zIndex: 900,
+          boxShadow: '0 -4px 20px rgba(41,22,19,0.12)'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+          {currentPrice && currentPrice > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                {selectedModality === 'rent' ? 'Locação' : 'Compra'}
+              </span>
+              <span style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-primary)' }}>
+                {formatCurrency(currentPrice)}
+              </span>
+            </div>
+          ) : (
+            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-main)' }}>
+              Sob Consulta
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: '0.5rem', flex: 1, justifyContent: 'flex-end' }}>
+            <a
+              href={waUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="btn btn-primary btn-sm"
+              style={{
+                backgroundColor: '#25D366',
+                borderColor: '#25D366',
+                color: '#FFFFFF',
+                padding: '0 1.25rem',
+                minHeight: '44px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                boxShadow: '0 2px 10px rgba(37,211,102,0.3)'
+              }}
+            >
+              <MessageCircle size={18} />
+              <span>Tenho Interesse</span>
+            </a>
+          </div>
+        </div>
+      </div>
 
       {/* Image Zoom Lightbox Modal */}
       {isZoomOpen && (
@@ -731,7 +821,7 @@ Gostaria de verificar disponibilidade.`;
               className="btn-icon"
               style={{
                 position: 'absolute',
-                top: '-40px',
+                top: '-45px',
                 right: '0',
                 backgroundColor: '#FFFFFF',
                 color: '#291613'
@@ -753,6 +843,18 @@ Gostaria de verificar disponibilidade.`;
           </div>
         </div>
       )}
+
+      <style>{`
+        @media (max-width: 768px) {
+          .product-mobile-bottom-bar {
+            display: block !important;
+          }
+          .product-related-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 0.75rem !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

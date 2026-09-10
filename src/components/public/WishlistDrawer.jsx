@@ -1,12 +1,11 @@
 import React from 'react';
-import { X, Heart, Trash2, ShoppingBag } from 'lucide-react';
+import { X, Heart, Trash2, MessageCircle } from 'lucide-react';
 import { useWishlist } from '../../context/WishlistContext';
-import { useCart } from '../../context/CartContext';
-import { formatCurrency } from '../../core/utils';
+import { formatCurrency, buildProductWhatsAppMessage, buildWhatsAppLink } from '../../core/utils';
+import { NeutralImagePlaceholder } from '../common/NeutralImagePlaceholder';
 
 export const WishlistDrawer = ({ onSelectProduct, onExploreCatalog }) => {
   const { wishlist, isWishlistOpen, setIsWishlistOpen, toggleWishlist } = useWishlist();
-  const { addToCart } = useCart();
 
   if (!isWishlistOpen) return null;
 
@@ -67,7 +66,7 @@ export const WishlistDrawer = ({ onSelectProduct, onExploreCatalog }) => {
                 Nenhum vestido salvo
               </h4>
               <p style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)', marginBottom: '1.5rem' }}>
-                Salve suas criações prediletas para comparar ou provar no Atelier.
+                Salve suas criações prediletas para consultar disponibilidade ou provar no Atelier.
               </p>
               <button
                 className="btn btn-primary btn-sm"
@@ -82,7 +81,16 @@ export const WishlistDrawer = ({ onSelectProduct, onExploreCatalog }) => {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               {wishlist.map((product) => {
-                const img = product.images?.[0]?.url || 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?auto=format&fit=crop&w=400&q=80';
+                const img = product.images?.[0]?.url || null;
+                const effectivePrice = product.promotionalPrice || product.price;
+                const waMsg = buildProductWhatsAppMessage({
+                  name: product.name,
+                  sku: product.sku,
+                  modality: product.modality,
+                  price: effectivePrice
+                });
+                const waUrl = buildWhatsAppLink(waMsg);
+
                 return (
                   <div
                     key={product.id}
@@ -94,9 +102,7 @@ export const WishlistDrawer = ({ onSelectProduct, onExploreCatalog }) => {
                       alignItems: 'center'
                     }}
                   >
-                    <img
-                      src={img}
-                      alt={product.name}
+                    <div
                       onClick={() => {
                         setIsWishlistOpen(false);
                         onSelectProduct(product);
@@ -104,11 +110,26 @@ export const WishlistDrawer = ({ onSelectProduct, onExploreCatalog }) => {
                       style={{
                         width: 72,
                         height: 96,
-                        objectFit: 'cover',
                         borderRadius: 'var(--radius-sm)',
-                        cursor: 'pointer'
+                        overflow: 'hidden',
+                        cursor: 'pointer',
+                        flexShrink: 0
                       }}
-                    />
+                    >
+                      {img ? (
+                        <img
+                          src={img}
+                          alt={product.name}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      ) : (
+                        <NeutralImagePlaceholder title={product.name} height="100%" />
+                      )}
+                    </div>
 
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <h4
@@ -122,28 +143,45 @@ export const WishlistDrawer = ({ onSelectProduct, onExploreCatalog }) => {
                           fontWeight: 600,
                           color: 'var(--color-text-main)',
                           cursor: 'pointer',
-                          marginBottom: '0.2rem'
+                          marginBottom: '0.2rem',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
                         }}
                       >
                         {product.name}
                       </h4>
 
-                      <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--color-primary)', display: 'block', marginBottom: '0.6rem' }}>
-                        {formatCurrency(product.promotionalPrice || product.price)}
-                      </span>
+                      {effectivePrice && effectivePrice > 0 ? (
+                        <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--color-primary)', display: 'block', marginBottom: '0.6rem' }}>
+                          {formatCurrency(effectivePrice)}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.6rem' }}>
+                          Sob Consulta
+                        </span>
+                      )}
 
                       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                        <button
-                          onClick={() => {
-                            addToCart(product, product.variants?.[0] || null, product.modality === 'rent' ? 'rent' : 'buy', 1);
-                            setIsWishlistOpen(false);
+                        <a
+                          href={waUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn btn-sm"
+                          style={{
+                            fontSize: '0.75rem',
+                            padding: '0.35rem 0.75rem',
+                            backgroundColor: '#25D366',
+                            color: '#FFFFFF',
+                            borderColor: '#25D366',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.3rem'
                           }}
-                          className="btn btn-dark btn-sm"
-                          style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
                         >
-                          <ShoppingBag size={13} />
-                          <span>Mover p/ Sacola</span>
-                        </button>
+                          <MessageCircle size={13} />
+                          <span>WhatsApp</span>
+                        </a>
                         <button
                           onClick={() => toggleWishlist(product)}
                           style={{ color: 'var(--color-text-muted)', padding: '4px', cursor: 'pointer' }}

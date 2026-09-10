@@ -25,7 +25,7 @@ export const AdminCategories = () => {
     setFormData({
       name: '',
       description: '',
-      image: 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?auto=format&fit=crop&w=800&q=80',
+      image: '',
       active: true
     });
     setIsModalOpen(true);
@@ -44,16 +44,30 @@ export const AdminCategories = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!formData.name.trim()) return;
+    if (!formData.name) return;
 
     try {
+      const slug = formData.name
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
       if (editingCategory) {
-        await dataService.categories.update(editingCategory.id, formData);
+        await dataService.categories.update(editingCategory.id, {
+          ...formData,
+          slug
+        });
         showToast('Categoria atualizada com sucesso!', 'success');
       } else {
-        await dataService.categories.create(formData);
-        showToast('Nova categoria criada com sucesso!', 'success');
+        await dataService.categories.create({
+          ...formData,
+          slug
+        });
+        showToast('Categoria criada com sucesso!', 'success');
       }
+
       setIsModalOpen(false);
       refreshData();
     } catch (err) {
@@ -64,9 +78,16 @@ export const AdminCategories = () => {
 
   const handleDeleteConfirm = async () => {
     if (!categoryToDelete) return;
+    const count = products.filter(p => p.categoryId === categoryToDelete.id).length;
+    if (count > 0) {
+      showToast(`Não é possível excluir: existem ${count} vestidos nesta categoria.`, 'warning');
+      setCategoryToDelete(null);
+      return;
+    }
+
     try {
       await dataService.categories.delete(categoryToDelete.id);
-      showToast(`Categoria "${categoryToDelete.name}" excluída.`, 'info');
+      showToast('Categoria excluída com sucesso!', 'success');
       setCategoryToDelete(null);
       refreshData();
     } catch (err) {
@@ -80,11 +101,11 @@ export const AdminCategories = () => {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 style={{ fontFamily: 'var(--font-editorial)', fontSize: '2.2rem', color: 'var(--color-text-main)' }}>
+          <h2 style={{ fontFamily: 'var(--font-editorial)', fontSize: '1.8rem', color: 'var(--color-text-main)' }}>
             Categorias & Coleções
-          </h1>
+          </h2>
           <p style={{ fontSize: '0.88rem', color: 'var(--color-text-secondary)' }}>
-            Gerencie as seções do site público, filtros e menus de navegação.
+            Organize os vestidos por ocasiões, modelos e linhas de produtos.
           </p>
         </div>
 
@@ -118,12 +139,32 @@ export const AdminCategories = () => {
                 flexDirection: 'column'
               }}
             >
-              <div style={{ height: '180px', position: 'relative', overflow: 'hidden' }}>
-                <img
-                  src={cat.image}
-                  alt={cat.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
+              <div style={{ height: '180px', position: 'relative', overflow: 'hidden', backgroundColor: 'var(--color-bg-subtle)' }}>
+                {cat.image && !cat.image.includes('unsplash') ? (
+                  <img
+                    src={cat.image}
+                    alt={cat.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'linear-gradient(145deg, #F8E5DF 0%, #F3D8CF 60%, #E8C8BE 100%)',
+                      color: 'var(--color-primary)'
+                    }}
+                  >
+                    <FolderTree size={36} />
+                    <span style={{ fontSize: '0.8rem', fontWeight: 600, marginTop: '0.4rem', color: 'var(--color-text-main)' }}>
+                      {cat.name}
+                    </span>
+                  </div>
+                )}
                 <div
                   style={{
                     position: 'absolute',
@@ -218,7 +259,7 @@ export const AdminCategories = () => {
                   <label className="form-label">URL da Imagem de Capa</label>
                   <input
                     type="url"
-                    placeholder="https://images.unsplash.com/..."
+                    placeholder="https://exemplo.com/imagem-categoria.jpg"
                     value={formData.image}
                     onChange={(e) => setFormData({ ...formData, image: e.target.value })}
                     className="input-text"

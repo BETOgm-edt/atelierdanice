@@ -3,42 +3,45 @@ import { LuxuryLogo } from '../common/LuxuryLogo';
 import { Phone, MapPin, Clock, MessageCircle, Shield, Sparkles } from 'lucide-react';
 import { InstagramIcon } from '../common/Icons';
 import { useStore } from '../../context/StoreContext';
+import { buildWhatsAppLink, getWhatsAppDisplayPhone } from '../../core/utils';
 
 export const Footer = ({ onNavigate }) => {
-  const { settings } = useStore();
+  const { settings, categories } = useStore();
   const store = settings?.store || {};
 
   return (
     <footer
+      className="public-footer"
       style={{
         backgroundColor: '#4E231F', // Rich luxury velvet rose background (strict pink/rose foundation)
         color: '#FBF0EB',
-        paddingTop: '5rem',
+        paddingTop: '4.5rem',
         paddingBottom: '2.5rem',
         borderTop: '2px solid var(--color-border)',
-        marginTop: '6rem'
+        marginTop: '5rem'
       }}
     >
       <div className="container">
         <div
+          className="footer-grid"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: '3rem',
-            marginBottom: '4rem'
+            gap: '2.5rem',
+            marginBottom: '3.5rem'
           }}
         >
           {/* Brand Col */}
           <div>
-            <div style={{ marginBottom: '1.5rem' }}>
-              <LuxuryLogo height={92} color="#F3D8CF" showSlogan={true} />
+            <div style={{ marginBottom: '1.25rem' }}>
+              <LuxuryLogo height={80} color="#F3D8CF" showSlogan={true} />
             </div>
             <p
               style={{
-                fontSize: '0.92rem',
+                fontSize: '0.9rem',
                 lineHeight: 1.6,
                 color: '#E8CEC5',
-                marginBottom: '1.5rem'
+                marginBottom: '1.25rem'
               }}
             >
               Alta costura autoral com identidade feminina, elegância e rigor artesanal. Vestidos sob medida para compra e locação exclusiva.
@@ -59,7 +62,7 @@ export const Footer = ({ onNavigate }) => {
                 <InstagramIcon size={18} />
               </a>
               <a
-                href={`https://wa.me/${store.whatsapp || '5511999998888'}`}
+                href={buildWhatsAppLink('Olá! Gostaria de falar com uma consultora do Atelier Nice.')}
                 target="_blank"
                 rel="noreferrer"
                 className="btn-icon"
@@ -91,46 +94,27 @@ export const Footer = ({ onNavigate }) => {
               Coleções & Vestidos
             </h4>
             <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.9rem' }}>
-              <li>
-                <button
-                  onClick={() => onNavigate('/produtos?categoria=festa-e-gala')}
-                  style={{ color: '#C7AFA7', transition: 'color var(--transition-fast)' }}
-                >
-                  Vestidos de Gala & Noite
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => onNavigate('/produtos?categoria=madrinhas')}
-                  style={{ color: '#C7AFA7', transition: 'color var(--transition-fast)' }}
-                >
-                  Madrinhas de Casamento
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => onNavigate('/produtos?categoria=noivas-e-civil')}
-                  style={{ color: '#C7AFA7', transition: 'color var(--transition-fast)' }}
-                >
-                  Noivas & Cerimônia Civil
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => onNavigate('/produtos?categoria=formatura')}
-                  style={{ color: '#C7AFA7', transition: 'color var(--transition-fast)' }}
-                >
-                  Formatura & Bailes
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => onNavigate('/produtos?categoria=debutantes')}
-                  style={{ color: '#C7AFA7', transition: 'color var(--transition-fast)' }}
-                >
-                  Debutantes 15 Anos
-                </button>
-              </li>
+              {categories && categories.filter(c => c.active !== false).length > 0 ? (
+                categories.filter(c => c.active !== false).slice(0, 5).map(cat => (
+                  <li key={cat.id}>
+                    <button
+                      onClick={() => onNavigate(`/produtos?categoria=${cat.slug || cat.id}`)}
+                      style={{ color: '#C7AFA7', transition: 'color var(--transition-fast)' }}
+                    >
+                      {cat.name}
+                    </button>
+                  </li>
+                ))
+              ) : (
+                <li>
+                  <button
+                    onClick={() => onNavigate('/produtos')}
+                    style={{ color: '#C7AFA7', transition: 'color var(--transition-fast)' }}
+                  >
+                    Ver Catálogo Completo
+                  </button>
+                </li>
+              )}
             </ul>
           </div>
 
@@ -149,18 +133,25 @@ export const Footer = ({ onNavigate }) => {
             >
               Atendimento & Prova
             </h4>
-            <ul style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.88rem', color: '#C7AFA7' }}>
+            <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.88rem', color: '#C7AFA7' }}>
               <li style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start' }}>
                 <MapPin size={18} color="var(--color-primary)" style={{ flexShrink: 0, marginTop: 2 }} />
-                <span>{store.address || 'Alameda das Magnólias, 480 — Jardins, São Paulo - SP'}</span>
+                <span>{store.address || 'Atendimento exclusivo com agendamento prévio'}</span>
               </li>
               <li style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start' }}>
                 <Clock size={18} color="var(--color-primary)" style={{ flexShrink: 0, marginTop: 2 }} />
-                <span>{store.businessHours || 'Seg. a Sex. 09h às 19h | Sábados com agendamento'}</span>
+                <span>{store.businessHours || 'Segunda a Sábado com horário marcado'}</span>
               </li>
               <li style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
-                <Phone size={18} color="var(--color-primary)" style={{ flexShrink: 0 }} />
-                <span>{store.phone || '(11) 3456-7890'}</span>
+                <MessageCircle size={18} color="var(--color-primary)" style={{ flexShrink: 0 }} />
+                <a
+                  href={buildWhatsAppLink('Olá! Gostaria de agendar um horário no Atelier.')}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: '#F3D8CF', textDecoration: 'underline' }}
+                >
+                  WhatsApp: {getWhatsAppDisplayPhone()}
+                </a>
               </li>
             </ul>
           </div>
@@ -191,60 +182,65 @@ export const Footer = ({ onNavigate }) => {
                   marginBottom: '0.5rem'
                 }}
               >
-                <Sparkles size={14} /> Atendimento VIP
+                <Sparkles size={14} /> Atendimento Personalizado
               </span>
               <h5 style={{ fontFamily: 'var(--font-editorial)', fontSize: '1.25rem', color: '#FFFFFF', marginBottom: '0.5rem' }}>
                 Agende sua Prova Exclusiva
               </h5>
               <p style={{ fontSize: '0.82rem', color: '#C7AFA7', lineHeight: 1.4 }}>
-                Receba consultoria de estilo personalizada com nossa estilista em sala privativa com espumante.
+                Receba consultoria de estilo personalizada com nossa estilista para compra ou locação sob medida.
               </p>
             </div>
 
-            <button
-              onClick={() => onNavigate('/contato')}
+            <a
+              href={buildWhatsAppLink('Olá! Gostaria de agendar uma prova exclusiva de vestidos no Atelier Nice.')}
+              target="_blank"
+              rel="noreferrer"
               className="btn btn-primary btn-sm"
-              style={{ marginTop: '1.25rem', width: '100%' }}
+              style={{ marginTop: '1.25rem', width: '100%', textAlign: 'center' }}
             >
-              Agendar Horário
-            </button>
+              Agendar no WhatsApp
+            </a>
           </div>
         </div>
 
         {/* Bottom Bar */}
         <div
+          className="footer-bottom-bar"
           style={{
             paddingTop: '2rem',
             borderTop: '1px solid rgba(243, 216, 207, 0.18)',
             display: 'flex',
             flexWrap: 'wrap',
             alignItems: 'center',
-            justifyContent: 'space-between',
+            justifyContent: 'center',
+            textAlign: 'center',
             gap: '1rem',
             fontSize: '0.82rem',
             color: '#D8BCB3'
           }}
         >
-          <p>© 2026 Atelier Nice — Todos os direitos reservados. Alta Costura & Moda Festa.</p>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-            <button
-              onClick={() => onNavigate('/admin')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                color: '#F3D8CF',
-                fontSize: '0.8rem',
-                cursor: 'pointer'
-              }}
-            >
-              <Shield size={14} color="#B67068" />
-              <span>Acesso Administrativo</span>
-            </button>
-          </div>
+          <p>© 2026 Atelier Nice — Alta Costura, Moda Festa e Vestidos Exclusivos.</p>
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 640px) {
+          .public-footer {
+            padding-top: 3rem !important;
+            margin-top: 3.5rem !important;
+          }
+          .footer-grid {
+            gap: 2rem !important;
+            margin-bottom: 2.5rem !important;
+          }
+          .footer-bottom-bar {
+            flex-direction: column !important;
+            text-align: center !important;
+            gap: 0.75rem !important;
+          }
+        }
+      `}</style>
     </footer>
   );
 };

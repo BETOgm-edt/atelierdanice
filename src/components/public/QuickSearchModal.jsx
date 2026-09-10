@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, ArrowRight, Tag } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { formatCurrency } from '../../core/utils';
+import { NeutralImagePlaceholder } from '../common/NeutralImagePlaceholder';
 
 export const QuickSearchModal = ({ isOpen, onClose, onSelectProduct, onExploreAll }) => {
   const { products } = useStore();
@@ -132,7 +133,7 @@ export const QuickSearchModal = ({ isOpen, onClose, onSelectProduct, onExploreAl
               </div>
 
               {results.map((product) => {
-                const img = product.images?.[0]?.url || 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?auto=format&fit=crop&w=400&q=80';
+                const img = product.images?.[0]?.url || null;
                 return (
                   <div
                     key={product.id}
@@ -151,11 +152,17 @@ export const QuickSearchModal = ({ isOpen, onClose, onSelectProduct, onExploreAl
                     }}
                     className="search-item-hover"
                   >
-                    <img
-                      src={img}
-                      alt={product.name}
-                      style={{ width: 48, height: 64, objectFit: 'cover', borderRadius: 'var(--radius-xs)' }}
-                    />
+                    <div style={{ width: 48, height: 64, borderRadius: 'var(--radius-xs)', overflow: 'hidden', flexShrink: 0 }}>
+                      {img ? (
+                        <img
+                          src={img}
+                          alt={product.name}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <NeutralImagePlaceholder title={product.name} height="100%" />
+                      )}
+                    </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <span style={{ fontSize: '0.72rem', color: 'var(--color-primary)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>
                         {product.categoryName}

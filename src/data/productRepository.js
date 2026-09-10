@@ -5,7 +5,6 @@
 
 import { supabase, isSupabaseConfigured } from '../lib/supabase/client';
 import { storageAdapter } from './storageAdapter';
-import { INITIAL_PRODUCTS } from './mockData';
 import { generateSKU, generateSlug, calculateTotalStock } from '../core/utils';
 import { storageRepository } from './storageRepository';
 
@@ -59,16 +58,7 @@ const formatProductFromDB = (row) => {
     variants: Array.isArray(row.variants) ? row.variants : [],
     tags: Array.isArray(row.tags) ? row.tags : [],
     seo: row.seo || {},
-    images: images.length > 0 ? images : [
-      {
-        id: `img-${row.id}-default`,
-        url: 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?auto=format&fit=crop&w=1000&q=85',
-        publicUrl: 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?auto=format&fit=crop&w=1000&q=85',
-        isPrimary: true,
-        isCover: true,
-        alt: row.name
-      }
-    ],
+    images: images,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
@@ -82,8 +72,8 @@ class ProductRepository {
 
   ensureLocalInitialized() {
     const existing = storageAdapter.getItem(STORAGE_KEY, null);
-    if (!existing || !Array.isArray(existing) || existing.length === 0) {
-      storageAdapter.setItem(STORAGE_KEY, INITIAL_PRODUCTS);
+    if (!existing || !Array.isArray(existing)) {
+      storageAdapter.setItem(STORAGE_KEY, []);
     }
   }
 
@@ -143,7 +133,7 @@ class ProductRepository {
         const { data, error } = await query;
         if (error) throw error;
 
-        if (data && data.length > 0) {
+        if (Array.isArray(data)) {
           let formatted = data.map(formatProductFromDB);
 
           // Client-side text search if provided
@@ -189,7 +179,7 @@ class ProductRepository {
 
     // Local fallback
     this.ensureLocalInitialized();
-    let products = storageAdapter.getItem(STORAGE_KEY, INITIAL_PRODUCTS);
+    let products = storageAdapter.getItem(STORAGE_KEY, []);
 
     if (filter.onlyCatalog) {
       products = products.filter((p) => p.status === 'published' || p.status === 'out_of_stock');

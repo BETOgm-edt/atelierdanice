@@ -122,8 +122,9 @@ export const AdminOrders = () => {
         </select>
       </div>
 
-      {/* Orders Table */}
+      {/* Orders Container: Desktop Table + Mobile Cards */}
       <div
+        className="admin-orders-container"
         style={{
           backgroundColor: 'var(--color-bg-card)',
           borderRadius: 'var(--radius-xl)',
@@ -132,7 +133,8 @@ export const AdminOrders = () => {
           overflow: 'hidden'
         }}
       >
-        <div style={{ overflowX: 'auto' }}>
+        {/* Desktop Table View */}
+        <div className="admin-desktop-orders" style={{ overflowX: 'auto' }}>
           <table>
             <thead style={{ backgroundColor: 'var(--color-bg-surface)', borderBottom: '1px solid var(--color-border)' }}>
               <tr>
@@ -218,6 +220,64 @@ export const AdminOrders = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Cards View (<= 768px) */}
+        <div className="admin-mobile-orders" style={{ display: 'none', flexDirection: 'column' }}>
+          {filteredOrders.length === 0 ? (
+            <div style={{ padding: '2.5rem 1.5rem', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+              Nenhum pedido encontrado.
+            </div>
+          ) : (
+            filteredOrders.map((order) => (
+              <div
+                key={order.id}
+                style={{
+                  padding: '1rem',
+                  borderBottom: '1px solid var(--color-border-subtle)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.65rem'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <strong style={{ fontSize: '0.95rem', color: 'var(--color-text-main)' }}>
+                    {order.orderNumber}
+                  </strong>
+                  <StatusBadge status={order.status} type="order" size="sm" />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <div>
+                    <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--color-text-main)', display: 'block' }}>
+                      {order.customer?.name}
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                      {order.customer?.phone} • {formatDate(order.createdAt)}
+                    </span>
+                  </div>
+
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-primary)' }}>
+                      {formatCurrency(order.total)}
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', display: 'block' }}>
+                      {order.items?.length} item(ns)
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setSelectedOrder(order)}
+                  className="btn btn-secondary btn-sm"
+                  style={{ width: '100%', minHeight: '38px', justifyContent: 'center', marginTop: '0.25rem' }}
+                >
+                  <Eye size={14} />
+                  <span>Ver Detalhes do Pedido</span>
+                </button>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -360,6 +420,17 @@ export const AdminOrders = () => {
           </div>
         </div>
       )}
+
+      <style>{`
+        @media (max-width: 768px) {
+          .admin-desktop-orders {
+            display: none !important;
+          }
+          .admin-mobile-orders {
+            display: flex !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

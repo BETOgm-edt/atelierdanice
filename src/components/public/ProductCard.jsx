@@ -4,18 +4,15 @@ import { formatCurrency, calculateDiscount } from '../../core/utils';
 import { useWishlist } from '../../context/WishlistContext';
 import { useCart } from '../../context/CartContext';
 import { StatusBadge } from '../common/StatusBadge';
+import { NeutralImagePlaceholder } from '../common/NeutralImagePlaceholder';
 
 export const ProductCard = ({ product, onClick }) => {
   const { isWishlisted, toggleWishlist } = useWishlist();
-  const { addToCart } = useCart();
 
   if (!product) return null;
 
   const isFavorited = isWishlisted(product.id);
-  const primaryImage = product.images?.find((img) => img.isPrimary) || product.images?.[0] || {
-    url: 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?auto=format&fit=crop&w=600&q=80',
-    alt: product.name
-  };
+  const primaryImage = product.images?.find((img) => img.isPrimary || img.isCover) || product.images?.[0] || null;
 
   const discount = calculateDiscount(product.price, product.promotionalPrice);
   const isOutOfStock = product.status === 'out_of_stock' || product.stock <= 0;
@@ -23,13 +20,6 @@ export const ProductCard = ({ product, onClick }) => {
   const handleFavoriteClick = (e) => {
     e.stopPropagation();
     toggleWishlist(product);
-  };
-
-  const handleQuickAdd = (e) => {
-    e.stopPropagation();
-    if (isOutOfStock) return;
-    const defaultVariant = product.variants?.[0] || null;
-    addToCart(product, defaultVariant, product.modality === 'rent' ? 'rent' : 'buy', 1);
   };
 
   return (
@@ -54,21 +44,27 @@ export const ProductCard = ({ product, onClick }) => {
           backgroundColor: '#F8E5DF'
         }}
       >
-        <img
-          src={primaryImage.url}
-          alt={primaryImage.alt || product.name}
-          loading="lazy"
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            transition: 'transform 500ms cubic-bezier(0.16, 1, 0.3, 1)'
-          }}
-          className="product-card-img"
-        />
+        {primaryImage?.url ? (
+          <img
+            src={primaryImage.url}
+            alt={primaryImage.alt || product.name}
+            loading="lazy"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              transition: 'transform 500ms cubic-bezier(0.16, 1, 0.3, 1)'
+            }}
+            className="product-card-img"
+          />
+        ) : (
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+            <NeutralImagePlaceholder title={product.name} subtitle={product.categoryName || 'Alta Costura'} />
+          </div>
+        )}
 
         {/* Top Badges Overlay */}
         <div
@@ -159,6 +155,7 @@ export const ProductCard = ({ product, onClick }) => {
 
       {/* Content Container */}
       <div
+        className="product-card-body"
         style={{
           padding: '1.25rem 1.25rem 1.5rem',
           display: 'flex',
@@ -170,6 +167,7 @@ export const ProductCard = ({ product, onClick }) => {
       >
         <div>
           <span
+            className="product-card-category"
             style={{
               fontSize: '0.75rem',
               textTransform: 'uppercase',
@@ -184,13 +182,18 @@ export const ProductCard = ({ product, onClick }) => {
           </span>
 
           <h3
+            className="product-card-title"
             style={{
               fontFamily: 'var(--font-editorial)',
               fontSize: '1.25rem',
               fontWeight: 600,
               color: 'var(--color-text-main)',
               lineHeight: 1.25,
-              marginBottom: '0.6rem'
+              marginBottom: '0.6rem',
+              overflow: 'hidden',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical'
             }}
           >
             {product.name}
@@ -199,10 +202,11 @@ export const ProductCard = ({ product, onClick }) => {
 
         <div>
           {/* Price Layout */}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.4rem' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.35rem' }}>
             {discount.hasDiscount ? (
               <>
                 <span
+                  className="product-card-price"
                   style={{
                     fontSize: '1.15rem',
                     fontWeight: 700,
@@ -213,8 +217,9 @@ export const ProductCard = ({ product, onClick }) => {
                   {formatCurrency(product.promotionalPrice)}
                 </span>
                 <span
+                  className="product-card-oldprice"
                   style={{
-                    fontSize: '0.85rem',
+                    fontSize: '0.82rem',
                     color: 'var(--color-text-muted)',
                     textDecoration: 'line-through'
                   }}
@@ -224,6 +229,7 @@ export const ProductCard = ({ product, onClick }) => {
               </>
             ) : (
               <span
+                className="product-card-price"
                 style={{
                   fontSize: '1.15rem',
                   fontWeight: 700,
@@ -238,8 +244,8 @@ export const ProductCard = ({ product, onClick }) => {
 
           {/* Rental Price Subtitle if available */}
           {product.rentalPrice && (
-            <div style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span>Ou aluguel por:</span>
+            <div className="product-card-rental" style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span>Aluguel:</span>
               <strong style={{ color: 'var(--color-text-main)' }}>{formatCurrency(product.rentalPrice)}</strong>
             </div>
           )}
@@ -253,6 +259,30 @@ export const ProductCard = ({ product, onClick }) => {
         .product-card:hover .product-card-hover-actions {
           opacity: 1 !important;
           transform: translateY(0) !important;
+        }
+        @media (max-width: 640px) {
+          .product-card-body {
+            padding: 0.75rem 0.75rem 0.9rem !important;
+          }
+          .product-card-category {
+            font-size: 0.65rem !important;
+            letter-spacing: 0.08em !important;
+            margin-bottom: 0.2rem !important;
+          }
+          .product-card-title {
+            font-size: 0.95rem !important;
+            line-height: 1.2 !important;
+            margin-bottom: 0.35rem !important;
+          }
+          .product-card-price {
+            font-size: 0.98rem !important;
+          }
+          .product-card-oldprice {
+            font-size: 0.72rem !important;
+          }
+          .product-card-rental {
+            font-size: 0.7rem !important;
+          }
         }
       `}</style>
     </div>

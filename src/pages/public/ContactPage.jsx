@@ -3,6 +3,7 @@ import { Phone, MessageCircle, MapPin, Clock, Send, CheckCircle2 } from 'lucide-
 import { InstagramIcon } from '../../components/common/Icons';
 import { useStore } from '../../context/StoreContext';
 import { useToast } from '../../context/ToastContext';
+import { getWhatsAppDisplayPhone, buildWhatsAppLink } from '../../core/utils';
 
 export const ContactPage = () => {
   const { settings } = useStore();
@@ -20,19 +21,36 @@ export const ContactPage = () => {
 
   const [submitted, setSubmitted] = useState(false);
 
+  const displayPhone = getWhatsAppDisplayPhone();
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.name || !form.phone) {
       showToast('Por favor, preencha seu nome e WhatsApp.', 'warning');
       return;
     }
+
+    const messageLines = [
+      `*Solicitação de Agendamento — Atelier Nice*`,
+      ``,
+      `*Cliente:* ${form.name}`,
+      `*WhatsApp:* ${form.phone}`,
+      form.email ? `*E-mail:* ${form.email}` : '',
+      `*Ocasião:* ${form.occasion}`,
+      form.eventDate ? `*Data do Evento:* ${form.eventDate}` : '',
+      form.notes ? `*Observações:* ${form.notes}` : ''
+    ].filter(Boolean);
+
+    const waUrl = buildWhatsAppLink({ customText: messageLines.join('\n') });
+    window.open(waUrl, '_blank');
+
     setSubmitted(true);
-    showToast('Solicitação de agendamento enviada com sucesso! Entraremos em contato via WhatsApp.', 'success');
+    showToast('Solicitação preparada! Abrindo WhatsApp do Atelier...', 'success');
   };
 
-  const rawPhone = import.meta.env.VITE_WHATSAPP_PHONE || store.whatsapp || '5511999998888';
-  const phone = rawPhone.replace(/\D/g, '');
-  const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent('Olá! Gostaria de agendar um horário para prova de vestidos no Atelier Nice.')}`;
+  const directWaUrl = buildWhatsAppLink({
+    customText: 'Olá! Gostaria de agendar um horário para consultoria e prova de vestidos no Atelier Nice.'
+  });
 
   return (
     <div className="container" style={{ padding: '3rem 0 6rem' }}>
@@ -41,10 +59,10 @@ export const ContactPage = () => {
           Atendimento Personalizado
         </span>
         <h1 className="heading-section" style={{ marginBottom: '0.75rem' }}>
-          Agende sua Prova no Atelier
+          Agende sua Consultoria no Atelier
         </h1>
         <p style={{ fontSize: '0.95rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-          Estamos prontas para receber você em nosso espaço nos Jardins. Escolha seu vestido com a tranquilidade que você merece.
+          Estamos à disposição para receber você com exclusividade. Escolha seu vestido com a tranquilidade e a atenção que você merece.
         </p>
       </div>
 
@@ -58,6 +76,7 @@ export const ContactPage = () => {
       >
         {/* Contact Form */}
         <div
+          className="contact-form-card"
           style={{
             backgroundColor: 'var(--color-bg-card)',
             padding: '2.5rem',
@@ -84,17 +103,29 @@ export const ContactPage = () => {
                 <CheckCircle2 size={32} />
               </div>
               <h3 style={{ fontFamily: 'var(--font-editorial)', fontSize: '1.6rem', color: 'var(--color-text-main)', marginBottom: '0.5rem' }}>
-                Solicitação Recebida!
+                Solicitação Direcionada!
               </h3>
               <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', marginBottom: '1.5rem', lineHeight: 1.6 }}>
-                Nossa consultora entrará em contato pelo número <strong>{form.phone}</strong> para confirmar a data e o melhor horário para sua visita.
+                Sua mensagem foi estruturada para o WhatsApp do Atelier. Caso a conversa não tenha aberto automaticamente, clique no botão abaixo.
               </p>
-              <button
-                onClick={() => setSubmitted(false)}
-                className="btn btn-outline btn-sm"
-              >
-                Enviar nova mensagem
-              </button>
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <a
+                  href={directWaUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-primary btn-sm"
+                  style={{ backgroundColor: '#25D366', borderColor: '#25D366' }}
+                >
+                  <MessageCircle size={16} />
+                  <span>Conversar no WhatsApp</span>
+                </a>
+                <button
+                  onClick={() => setSubmitted(false)}
+                  className="btn btn-outline btn-sm"
+                >
+                  Nova Solicitação
+                </button>
+              </div>
             </div>
           ) : (
             <form onSubmit={handleSubmit}>
@@ -117,7 +148,7 @@ export const ContactPage = () => {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="contact-form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="form-group">
                   <label className="form-label">
                     <span>WhatsApp</span>
@@ -126,7 +157,7 @@ export const ContactPage = () => {
                   <input
                     type="tel"
                     required
-                    placeholder="(11) 98765-4321"
+                    placeholder="(12) 99127-9309"
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
                     className="input-text"
@@ -147,7 +178,7 @@ export const ContactPage = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="contact-form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="form-group">
                   <label className="form-label">
                     <span>Data do Evento</span>
@@ -191,7 +222,7 @@ export const ContactPage = () => {
 
               <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '0.9rem' }}>
                 <Send size={16} />
-                <span>Solicitar Horário de Prova</span>
+                <span>Enviar via WhatsApp do Atelier</span>
               </button>
             </form>
           )}
@@ -209,31 +240,31 @@ export const ContactPage = () => {
             }}
           >
             <h3 style={{ fontFamily: 'var(--font-editorial)', fontSize: '1.45rem', color: 'var(--color-text-main)', marginBottom: '1.25rem' }}>
-              Nosso Atelier
+              Atendimento do Atelier
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', fontSize: '0.92rem' }}>
               <div style={{ display: 'flex', gap: '0.85rem' }}>
                 <MapPin size={20} color="var(--color-primary)" style={{ flexShrink: 0, marginTop: 2 }} />
                 <div>
-                  <strong style={{ color: 'var(--color-text-main)', display: 'block' }}>Endereço</strong>
-                  <span style={{ color: 'var(--color-text-secondary)' }}>{store.address || 'Alameda das Magnólias, 480 — Jardins, São Paulo - SP'}</span>
+                  <strong style={{ color: 'var(--color-text-main)', display: 'block' }}>Atendimento Presencial</strong>
+                  <span style={{ color: 'var(--color-text-secondary)' }}>{store.address || 'Consultoria e provas com agendamento prévio'}</span>
                 </div>
               </div>
 
               <div style={{ display: 'flex', gap: '0.85rem' }}>
                 <Clock size={20} color="var(--color-primary)" style={{ flexShrink: 0, marginTop: 2 }} />
                 <div>
-                  <strong style={{ color: 'var(--color-text-main)', display: 'block' }}>Horário de Funcionamento</strong>
-                  <span style={{ color: 'var(--color-text-secondary)' }}>{store.businessHours || 'Segunda a Sexta: 09h às 19h | Sábados: 09h às 16h (com hora marcada)'}</span>
+                  <strong style={{ color: 'var(--color-text-main)', display: 'block' }}>Horário de Atendimento</strong>
+                  <span style={{ color: 'var(--color-text-secondary)' }}>{store.businessHours || 'Segunda a Sábado — com agendamento'}</span>
                 </div>
               </div>
 
               <div style={{ display: 'flex', gap: '0.85rem' }}>
                 <Phone size={20} color="var(--color-primary)" style={{ flexShrink: 0, marginTop: 2 }} />
                 <div>
-                  <strong style={{ color: 'var(--color-text-main)', display: 'block' }}>Telefone & Recepção</strong>
-                  <span style={{ color: 'var(--color-text-secondary)' }}>{store.phone || '(11) 3456-7890'}</span>
+                  <strong style={{ color: 'var(--color-text-main)', display: 'block' }}>WhatsApp Oficial</strong>
+                  <span style={{ color: 'var(--color-text-secondary)' }}>{displayPhone}</span>
                 </div>
               </div>
             </div>
@@ -255,19 +286,19 @@ export const ContactPage = () => {
           >
             <div>
               <h4 style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--color-text-main)', marginBottom: '0.2rem' }}>
-                Prefere Atendimento Imediato?
+                Atendimento Rápido
               </h4>
               <p style={{ fontSize: '0.84rem', color: 'var(--color-text-secondary)' }}>
-                Fale agora mesmo com nossa consultora no WhatsApp.
+                Fale diretamente com nossa consultora no WhatsApp.
               </p>
             </div>
 
             <a
-              href={waUrl}
+              href={directWaUrl}
               target="_blank"
               rel="noreferrer"
               className="btn btn-sm"
-              style={{ backgroundColor: '#25D366', color: '#FFFFFF', borderColor: '#25D366' }}
+              style={{ backgroundColor: '#25D366', color: '#FFFFFF', borderColor: '#25D366', minHeight: '42px', padding: '0 1rem' }}
             >
               <MessageCircle size={16} />
               <span>Abrir WhatsApp</span>
@@ -275,6 +306,17 @@ export const ContactPage = () => {
           </div>
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 640px) {
+          .contact-form-grid-2 {
+            grid-template-columns: 1fr !important;
+          }
+          .contact-form-card {
+            padding: 1.5rem 1.25rem !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

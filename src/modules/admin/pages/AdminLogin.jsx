@@ -42,37 +42,43 @@ export const AdminLogin = ({ onReturnToStore }) => {
 
   return (
     <div
+      className="admin-login-screen"
       style={{
         minHeight: '100vh',
         backgroundColor: '#4E231F',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '2rem',
+        padding: '1.5rem',
         position: 'relative'
       }}
     >
       {/* Top Left Return Button */}
       <button
         onClick={onReturnToStore}
+        className="admin-login-return-btn"
         style={{
           position: 'absolute',
-          top: '2rem',
-          left: '2rem',
+          top: '1.5rem',
+          left: '1.5rem',
           display: 'flex',
           alignItems: 'center',
           gap: '0.4rem',
           color: '#FAF0EC',
-          fontSize: '0.88rem',
-          cursor: 'pointer'
+          fontSize: '0.85rem',
+          cursor: 'pointer',
+          padding: '0.4rem 0.6rem',
+          borderRadius: 'var(--radius-sm)',
+          backgroundColor: 'rgba(255,255,255,0.08)'
         }}
       >
         <ArrowLeft size={16} />
-        <span>Voltar para a Loja Pública</span>
+        <span>Loja Pública</span>
       </button>
 
       {/* Login Box */}
       <div
+        className="admin-login-box"
         style={{
           width: '100%',
           maxWidth: '460px',
@@ -80,13 +86,14 @@ export const AdminLogin = ({ onReturnToStore }) => {
           borderRadius: 'var(--radius-xl)',
           boxShadow: 'var(--shadow-lg)',
           border: '1px solid var(--color-border)',
-          padding: '2.75rem 2.5rem',
-          textAlign: 'center'
+          padding: '2.5rem 2rem',
+          textAlign: 'center',
+          marginTop: '2rem'
         }}
       >
         {/* Brand Logo */}
-        <div style={{ marginBottom: '1.75rem' }}>
-          <LuxuryLogo height={96} color="#B67068" />
+        <div style={{ marginBottom: '1.5rem' }}>
+          <LuxuryLogo height={80} color="#B67068" />
         </div>
 
         <span
@@ -227,6 +234,17 @@ export const AdminLogin = ({ onReturnToStore }) => {
           </div>
         )}
       </div>
+
+      <style>{`
+        @media (max-width: 480px) {
+          .admin-login-screen {
+            padding: 1rem !important;
+          }
+          .admin-login-box {
+            padding: 1.75rem 1.25rem !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

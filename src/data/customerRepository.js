@@ -3,7 +3,6 @@
  */
 
 import { storageAdapter } from './storageAdapter';
-import { INITIAL_CUSTOMERS } from './mockData';
 
 const STORAGE_KEY = 'atelier_nice_customers';
 
@@ -14,14 +13,14 @@ class CustomerRepository {
 
   ensureInitialized() {
     const existing = storageAdapter.getItem(STORAGE_KEY, null);
-    if (!existing || !Array.isArray(existing) || existing.length === 0) {
-      storageAdapter.setItem(STORAGE_KEY, INITIAL_CUSTOMERS);
+    if (!existing || !Array.isArray(existing)) {
+      storageAdapter.setItem(STORAGE_KEY, []);
     }
   }
 
   async getAll(search = '') {
     this.ensureInitialized();
-    let customers = storageAdapter.getItem(STORAGE_KEY, INITIAL_CUSTOMERS);
+    let customers = storageAdapter.getItem(STORAGE_KEY, []);
 
     if (search && search.trim() !== '') {
       const term = search.trim().toLowerCase();
@@ -39,14 +38,14 @@ class CustomerRepository {
 
   async getById(id) {
     this.ensureInitialized();
-    const customers = storageAdapter.getItem(STORAGE_KEY, INITIAL_CUSTOMERS);
+    const customers = storageAdapter.getItem(STORAGE_KEY, []);
     const customer = customers.find(c => c.id === id);
     return customer ? JSON.parse(JSON.stringify(customer)) : null;
   }
 
   async create(data) {
     this.ensureInitialized();
-    const customers = storageAdapter.getItem(STORAGE_KEY, INITIAL_CUSTOMERS);
+    const customers = storageAdapter.getItem(STORAGE_KEY, []);
     const id = `cust-${Date.now()}`;
 
     const newCustomer = {
@@ -68,7 +67,7 @@ class CustomerRepository {
 
   async recordPurchase(customerId, amount) {
     this.ensureInitialized();
-    const customers = storageAdapter.getItem(STORAGE_KEY, INITIAL_CUSTOMERS);
+    const customers = storageAdapter.getItem(STORAGE_KEY, []);
     const index = customers.findIndex(c => c.id === customerId);
 
     if (index !== -1) {

@@ -96,68 +96,100 @@ export const AdminStock = () => {
 
       {/* Grid of Product Stock Cards */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-        {filteredProducts.map((p) => {
-          const isCritical = p.stock <= (p.minStockAlert || 1);
-          const img = p.images?.[0]?.url || 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?auto=format&fit=crop&w=150&q=80';
+        {filteredProducts.length === 0 ? (
+          <div
+            style={{
+              backgroundColor: 'var(--color-bg-card)',
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid var(--color-border)',
+              padding: '3rem 1.5rem',
+              textAlign: 'center',
+              color: 'var(--color-text-muted)'
+            }}
+          >
+            Nenhum vestido encontrado no controle de estoque.
+          </div>
+        ) : (
+          filteredProducts.map((p) => {
+            const isCritical = p.stock <= (p.minStockAlert || 1);
+            const img = p.images?.[0]?.url;
 
-          return (
-            <div
-              key={p.id}
-              style={{
-                backgroundColor: 'var(--color-bg-card)',
-                borderRadius: 'var(--radius-lg)',
-                border: `1px solid ${isCritical ? 'var(--color-warning-border)' : 'var(--color-border)'}`,
-                padding: '1.5rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '1.25rem'
-              }}
-            >
-              {/* Product Header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <img
-                    src={img}
-                    alt={p.name}
-                    style={{ width: 44, height: 60, objectFit: 'cover', borderRadius: 'var(--radius-xs)' }}
-                  />
-                  <div>
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--color-text-main)' }}>
-                      {p.name}
-                    </h3>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
-                      SKU: {p.sku} • Categoria: {p.categoryName} • Alerta em ≤ {p.minStockAlert || 1} un.
-                    </span>
+            return (
+              <div
+                key={p.id}
+                style={{
+                  backgroundColor: 'var(--color-bg-card)',
+                  borderRadius: 'var(--radius-lg)',
+                  border: `1px solid ${isCritical ? 'var(--color-warning-border)' : 'var(--color-border)'}`,
+                  padding: '1.5rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1.25rem'
+                }}
+              >
+                {/* Product Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    {img && !img.includes('unsplash') ? (
+                      <img
+                        src={img}
+                        alt={p.name}
+                        style={{ width: 44, height: 60, objectFit: 'cover', borderRadius: 'var(--radius-xs)' }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 44,
+                          height: 60,
+                          borderRadius: 'var(--radius-xs)',
+                          backgroundColor: 'var(--color-bg-subtle)',
+                          border: '1px solid var(--color-border)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'var(--color-primary)'
+                        }}
+                      >
+                        <Boxes size={20} />
+                      </div>
+                    )}
+                    <div>
+                      <h3 style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--color-text-main)' }}>
+                        {p.name}
+                      </h3>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                        SKU: {p.sku || 'N/A'} • Categoria: {p.categoryName} • Alerta em ≤ {p.minStockAlert || 1} un.
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'block' }}>Saldo Total</span>
+                      <strong style={{ fontSize: '1.2rem', color: isCritical ? 'var(--color-danger)' : 'var(--color-text-main)' }}>
+                        {p.stock} unidades
+                      </strong>
+                    </div>
+
+                    {isCritical && (
+                      <span className="badge badge-warning" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <AlertTriangle size={12} />
+                        <span>Atenção</span>
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div style={{ textAlign: 'right' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'block' }}>Saldo Total</span>
-                    <strong style={{ fontSize: '1.2rem', color: isCritical ? 'var(--color-danger)' : 'var(--color-text-main)' }}>
-                      {p.stock} unidades
-                    </strong>
-                  </div>
-
-                  {isCritical && (
-                    <span className="badge badge-warning" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <AlertTriangle size={12} />
-                      <span>Atenção</span>
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Variants Matrix Table */}
-              {Array.isArray(p.variants) && p.variants.length > 0 && (
-                <div style={{ backgroundColor: 'var(--color-bg-surface)', padding: '0.75rem', borderRadius: 'var(--radius-md)' }}>
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                      gap: '0.75rem'
-                    }}
-                  >
+                {/* Variants Matrix Table */}
+                {Array.isArray(p.variants) && p.variants.length > 0 && (
+                  <div style={{ backgroundColor: 'var(--color-bg-surface)', padding: '0.75rem', borderRadius: 'var(--radius-md)' }}>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                        gap: '0.75rem'
+                      }}
+                    >
                     {p.variants.map((v) => (
                       <div
                         key={v.id}
@@ -183,27 +215,29 @@ export const AdminStock = () => {
                         </div>
 
                         {/* Quick stock +/- adjustment */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                           <button
                             onClick={() => handleAdjustStock(p, v.id, -1)}
                             className="btn-icon"
-                            style={{ width: 26, height: 26 }}
+                            style={{ width: 34, height: 34, borderRadius: 'var(--radius-sm)' }}
                             title="Diminuir 1 unidade"
+                            aria-label="Diminuir estoque"
                           >
-                            <Minus size={12} />
+                            <Minus size={14} />
                           </button>
 
-                          <span style={{ fontSize: '0.92rem', fontWeight: 700, minWidth: '22px', textAlign: 'center' }}>
+                          <span style={{ fontSize: '0.95rem', fontWeight: 700, minWidth: '24px', textAlign: 'center' }}>
                             {v.stock}
                           </span>
 
                           <button
                             onClick={() => handleAdjustStock(p, v.id, 1)}
                             className="btn-icon"
-                            style={{ width: 26, height: 26 }}
+                            style={{ width: 34, height: 34, borderRadius: 'var(--radius-sm)' }}
                             title="Aumentar 1 unidade"
+                            aria-label="Aumentar estoque"
                           >
-                            <Plus size={12} />
+                            <Plus size={14} />
                           </button>
                         </div>
                       </div>
@@ -213,7 +247,7 @@ export const AdminStock = () => {
               )}
             </div>
           );
-        })}
+        }))}
       </div>
     </div>
   );

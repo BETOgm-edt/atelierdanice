@@ -3,7 +3,6 @@
  */
 
 import { storageAdapter } from './storageAdapter';
-import { INITIAL_ORDERS } from './mockData';
 
 const STORAGE_KEY = 'atelier_nice_orders';
 
@@ -14,14 +13,14 @@ class OrderRepository {
 
   ensureInitialized() {
     const existing = storageAdapter.getItem(STORAGE_KEY, null);
-    if (!existing || !Array.isArray(existing) || existing.length === 0) {
-      storageAdapter.setItem(STORAGE_KEY, INITIAL_ORDERS);
+    if (!existing || !Array.isArray(existing)) {
+      storageAdapter.setItem(STORAGE_KEY, []);
     }
   }
 
   async getAll(filter = {}) {
     this.ensureInitialized();
-    let orders = storageAdapter.getItem(STORAGE_KEY, INITIAL_ORDERS);
+    let orders = storageAdapter.getItem(STORAGE_KEY, []);
 
     if (filter.status && filter.status !== 'all') {
       orders = orders.filter(o => o.status === filter.status);
@@ -43,14 +42,14 @@ class OrderRepository {
 
   async getById(id) {
     this.ensureInitialized();
-    const orders = storageAdapter.getItem(STORAGE_KEY, INITIAL_ORDERS);
+    const orders = storageAdapter.getItem(STORAGE_KEY, []);
     const order = orders.find(o => o.id === id || o.orderNumber === id);
     return order ? JSON.parse(JSON.stringify(order)) : null;
   }
 
   async create(orderData) {
     this.ensureInitialized();
-    const orders = storageAdapter.getItem(STORAGE_KEY, INITIAL_ORDERS);
+    const orders = storageAdapter.getItem(STORAGE_KEY, []);
     const randomNum = Math.floor(10000 + Math.random() * 90000);
     const id = `ord-${Date.now()}`;
     const orderNumber = `#ATN-${randomNum}`;
@@ -83,7 +82,7 @@ class OrderRepository {
 
   async updateStatus(id, newStatus) {
     this.ensureInitialized();
-    const orders = storageAdapter.getItem(STORAGE_KEY, INITIAL_ORDERS);
+    const orders = storageAdapter.getItem(STORAGE_KEY, []);
     const index = orders.findIndex(o => o.id === id || o.orderNumber === id);
 
     if (index === -1) {

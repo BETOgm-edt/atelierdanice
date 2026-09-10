@@ -78,9 +78,20 @@
   --transition-normal: 250ms cubic-bezier(0.16, 1, 0.3, 1);
   --transition-smooth: 400ms cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* Layout Widths */
+  /* Layout Widths & Heights */
   --container-max-width: 1320px;
   --admin-sidebar-width: 290px;
   --admin-header-height: 84px;
-  --public-header-height: 124px;
+  --admin-header-height-mobile: 60px;
+  --public-header-height: 116px;
+  --public-header-height-mobile: 66px;
+
+  /* Safe Area Tokens for Notch Devices / iOS Home Indicator */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+
+  /* Touch Targets */
+  --touch-target-min: 44px;
 }

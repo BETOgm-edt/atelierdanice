@@ -5,7 +5,6 @@
 
 import { supabase, isSupabaseConfigured } from '../lib/supabase/client';
 import { storageAdapter } from './storageAdapter';
-import { INITIAL_CATEGORIES } from './mockData';
 import { generateSlug } from '../core/utils';
 
 const STORAGE_KEY = 'atelier_nice_categories';
@@ -18,8 +17,8 @@ class CategoryRepository {
 
   ensureLocalInitialized() {
     const existing = storageAdapter.getItem(STORAGE_KEY, null);
-    if (!existing || !Array.isArray(existing) || existing.length === 0) {
-      storageAdapter.setItem(STORAGE_KEY, INITIAL_CATEGORIES);
+    if (!existing || !Array.isArray(existing)) {
+      storageAdapter.setItem(STORAGE_KEY, []);
     }
   }
 
@@ -52,7 +51,7 @@ class CategoryRepository {
 
         const { data, error } = await query;
         if (error) throw error;
-        if (data && data.length > 0) {
+        if (Array.isArray(data)) {
           return data;
         }
       } catch (err) {
@@ -62,7 +61,7 @@ class CategoryRepository {
 
     // Local fallback
     this.ensureLocalInitialized();
-    let categories = storageAdapter.getItem(STORAGE_KEY, INITIAL_CATEGORIES);
+    let categories = storageAdapter.getItem(STORAGE_KEY, []);
     if (onlyActive) {
       categories = categories.filter((c) => c.active !== false);
     }
@@ -113,7 +112,7 @@ class CategoryRepository {
       name: categoryData.name.trim(),
       slug,
       description: categoryData.description || '',
-      image: categoryData.image || 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?auto=format&fit=crop&w=800&q=80',
+      image: categoryData.image || '',
       active: categoryData.active !== undefined ? categoryData.active : true
     };
 

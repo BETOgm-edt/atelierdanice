@@ -55,17 +55,76 @@ export const AboutPage = ({ onNavigate }) => {
         </div>
 
         <div>
-          <img
-            src="https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=800&q=85"
-            alt="Atelier Nice Alta Costura"
+          <div
             style={{
               width: '100%',
-              height: '460px',
-              objectFit: 'cover',
+              minHeight: '420px',
+              backgroundColor: 'var(--color-bg-card)',
+              border: '1px solid var(--color-border)',
               borderRadius: 'var(--radius-xl)',
-              boxShadow: 'var(--shadow-lg)'
+              boxShadow: 'var(--shadow-lg)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '3rem 2rem',
+              textAlign: 'center',
+              background: 'linear-gradient(145deg, #FAF7F2 0%, #F3D8CF 55%, #E8C8BE 100%)'
             }}
-          />
+          >
+            <div
+              style={{
+                width: 80,
+                height: 80,
+                borderRadius: '50%',
+                border: '2px solid #B67068',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '1.5rem',
+                backgroundColor: 'rgba(255, 255, 255, 0.5)',
+                boxShadow: '0 8px 24px rgba(182, 112, 104, 0.15)'
+              }}
+            >
+              <Sparkles size={36} color="#B67068" />
+            </div>
+
+            <span
+              style={{
+                fontFamily: 'var(--font-editorial)',
+                fontSize: '2rem',
+                color: 'var(--color-text-main)',
+                fontWeight: 600,
+                marginBottom: '0.4rem'
+              }}
+            >
+              Atelier Nice
+            </span>
+
+            <span
+              style={{
+                fontSize: '0.82rem',
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                color: 'var(--color-primary)',
+                fontWeight: 600,
+                marginBottom: '1.5rem'
+              }}
+            >
+              Alta Costura & Elegância
+            </span>
+
+            <p
+              style={{
+                fontSize: '0.9rem',
+                color: 'var(--color-text-secondary)',
+                maxWidth: '320px',
+                lineHeight: 1.6
+              }}
+            >
+              Cada criação celebra a beleza autêntica e a singularidade feminina com tecidos nobres e acabamento impecável.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -112,10 +171,10 @@ export const AboutPage = ({ onNavigate }) => {
               <Scissors size={26} />
             </div>
             <h4 style={{ fontFamily: 'var(--font-editorial)', fontSize: '1.35rem', color: 'var(--color-text-main)', marginBottom: '0.5rem' }}>
-              Modelagem Escultural
+              Modelagem e Caimento
             </h4>
             <p style={{ fontSize: '0.88rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-              Estruturas internas anatômicas com barbatanas de silicone que abraçam a silhueta com extremo conforto.
+              Ajustes de alta precisão que abraçam a silhueta com extremo conforto e elegância.
             </p>
           </div>
 
@@ -136,10 +195,10 @@ export const AboutPage = ({ onNavigate }) => {
               <Award size={26} />
             </div>
             <h4 style={{ fontFamily: 'var(--font-editorial)', fontSize: '1.35rem', color: 'var(--color-text-main)', marginBottom: '0.5rem' }}>
-              Tecidos de Origem Nobre
+              Tecidos Nobres
             </h4>
             <p style={{ fontSize: '0.88rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-              Zibeline encorpado, Chiffon toque de seda, tules franceses bordados e crepes com caimento fluido.
+              Zibeline, seda pura, tules finos e rendas selecionadas com caimento impecável.
             </p>
           </div>
 
@@ -160,10 +219,10 @@ export const AboutPage = ({ onNavigate }) => {
               <Heart size={26} />
             </div>
             <h4 style={{ fontFamily: 'var(--font-editorial)', fontSize: '1.35rem', color: 'var(--color-text-main)', marginBottom: '0.5rem' }}>
-              Atendimento Acolhedor
+              Atendimento Dedicado
             </h4>
             <p style={{ fontSize: '0.88rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-              Sala privativa com espumante, consultoria de visagismo e tempo dedicado para você se sentir única.
+              Consultoria individual e personalizada para você encontrar o vestido perfeito para seu evento.
             </p>
           </div>
         </div>

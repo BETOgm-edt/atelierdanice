@@ -26,7 +26,7 @@ export const AuthProvider = ({ children }) => {
                 email: initialSession.user.email,
                 name: initialSession.user.user_metadata?.name || 'Administradora Atelier Nice',
                 role: 'admin',
-                avatar: initialSession.user.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
+                avatar: initialSession.user.user_metadata?.avatar_url || null
               });
             } else {
               setAdminUser(null);
@@ -63,7 +63,7 @@ export const AuthProvider = ({ children }) => {
               email: currentSession.user.email,
               name: currentSession.user.user_metadata?.name || 'Administradora Atelier Nice',
               role: 'admin',
-              avatar: currentSession.user.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
+              avatar: currentSession.user.user_metadata?.avatar_url || null
             });
           } else {
             setAdminUser(null);
@@ -109,7 +109,7 @@ export const AuthProvider = ({ children }) => {
           email: data.user.email,
           name: data.user.user_metadata?.name || 'Administradora Atelier Nice',
           role: 'admin',
-          avatar: data.user.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
+          avatar: data.user.user_metadata?.avatar_url || null
         };
 
         setSession(data.session);
@@ -122,7 +122,7 @@ export const AuthProvider = ({ children }) => {
           name: 'Nice — Diretora Criativa',
           email: cleanEmail,
           role: 'admin',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+          avatar: null,
           isDevSession: true
         };
         setAdminUser(user);
