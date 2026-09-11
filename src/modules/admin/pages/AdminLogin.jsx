@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Lock, Mail, ArrowRight, Sparkles, ArrowLeft, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Shield, Lock, Mail, ArrowRight, ArrowLeft, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { LuxuryLogo } from '../../../components/common/LuxuryLogo';
 import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../context/ToastContext';
@@ -16,8 +16,13 @@ export const AdminLogin = ({ onReturnToStore }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
-    setLoading(true);
 
+    if (!email.trim() || !password) {
+      setErrorMessage('Por favor, informe seu e-mail e senha cadastrados no Supabase Auth.');
+      return;
+    }
+
+    setLoading(true);
     const result = await login(email, password);
     setLoading(false);
 
@@ -26,17 +31,6 @@ export const AdminLogin = ({ onReturnToStore }) => {
     } else {
       setErrorMessage(result.error || 'Credenciais inválidas.');
       showToast(result.error || 'Erro na autenticação.', 'error');
-    }
-  };
-
-  const handleQuickDemoLogin = async () => {
-    setEmail('admin@ateliernice.com.br');
-    setPassword('nice2026');
-    setLoading(true);
-    const result = await login('admin@ateliernice.com.br', 'nice2026');
-    setLoading(false);
-    if (result.success) {
-      showToast('Acesso de demonstração liberado!', 'success');
     }
   };
 
@@ -116,7 +110,7 @@ export const AdminLogin = ({ onReturnToStore }) => {
           Acesso Restrito
         </h2>
         <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
-          Autenticação segura via Supabase Auth para gestão do catálogo e acervo.
+          Autenticação exclusiva via Supabase Auth para gestão do Atelier Nice.
         </p>
 
         {/* Supabase Status Indicator */}
@@ -129,21 +123,21 @@ export const AdminLogin = ({ onReturnToStore }) => {
             fontSize: '0.75rem',
             padding: '0.4rem 0.75rem',
             borderRadius: 'var(--radius-full)',
-            backgroundColor: isSupabaseConfigured ? 'var(--color-success-bg)' : 'var(--color-warning-bg)',
-            color: isSupabaseConfigured ? 'var(--color-success)' : 'var(--color-warning)',
+            backgroundColor: isSupabaseConfigured ? 'var(--color-success-bg)' : 'var(--color-danger-bg)',
+            color: isSupabaseConfigured ? 'var(--color-success)' : 'var(--color-danger)',
             marginBottom: '1.5rem',
-            border: `1px solid ${isSupabaseConfigured ? 'var(--color-success-border)' : 'var(--color-warning-border)'}`
+            border: `1px solid ${isSupabaseConfigured ? 'var(--color-success-border)' : 'var(--color-danger-border)'}`
           }}
         >
           {isSupabaseConfigured ? (
             <>
               <CheckCircle2 size={13} />
-              <span>Supabase Auth Conectado</span>
+              <span>Supabase Auth Ativo</span>
             </>
           ) : (
             <>
               <AlertCircle size={13} />
-              <span>Modo Demonstração (Configure o .env.local)</span>
+              <span>Supabase não configurado no .env.local</span>
             </>
           )}
         </div>
@@ -177,11 +171,12 @@ export const AdminLogin = ({ onReturnToStore }) => {
               <input
                 type="email"
                 required
-                placeholder="admin@ateliernice.com.br"
+                placeholder="seu-email@dominio.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="input-text"
                 style={{ paddingLeft: '2.4rem' }}
+                disabled={loading}
               />
             </div>
           </div>
@@ -198,13 +193,14 @@ export const AdminLogin = ({ onReturnToStore }) => {
                 onChange={(e) => setPassword(e.target.value)}
                 className="input-text"
                 style={{ paddingLeft: '2.4rem' }}
+                disabled={loading}
               />
             </div>
           </div>
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !isSupabaseConfigured}
             className="btn btn-primary"
             style={{ width: '100%', padding: '0.9rem', marginTop: '0.5rem' }}
           >
@@ -212,27 +208,6 @@ export const AdminLogin = ({ onReturnToStore }) => {
             <ArrowRight size={16} />
           </button>
         </form>
-
-        {/* Fallback Demo Helper if not yet configured */}
-        {!isSupabaseConfigured && (
-          <div
-            style={{
-              marginTop: '1.5rem',
-              paddingTop: '1.25rem',
-              borderTop: '1px solid var(--color-border-subtle)'
-            }}
-          >
-            <button
-              type="button"
-              onClick={handleQuickDemoLogin}
-              className="btn btn-secondary btn-sm"
-              style={{ width: '100%', fontSize: '0.82rem' }}
-            >
-              <Sparkles size={14} color="var(--color-accent-gold)" />
-              <span>Entrar com 1-Clique (Modo Demonstração)</span>
-            </button>
-          </div>
-        )}
       </div>
 
       <style>{`

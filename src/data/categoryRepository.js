@@ -1,25 +1,16 @@
 /**
- * ATELIER NICE — CATEGORY REPOSITORY (SUPABASE + FALLBACK)
- * Manages haute-couture categories in Supabase Database with relational integrity.
+ * ATELIER NICE — CATEGORY REPOSITORY (PURE SUPABASE DATABASE)
+ * Strict Rule: NADA FICTÍCIO NO SITE.
+ * Manages haute-couture categories directly in Supabase Database.
+ * No local mock data, no mock seeds.
  */
 
 import { supabase, isSupabaseConfigured } from '../lib/supabase/client';
-import { storageAdapter } from './storageAdapter';
 import { generateSlug } from '../core/utils';
-
-const STORAGE_KEY = 'atelier_nice_categories';
 
 class CategoryRepository {
   constructor() {
-    this.ensureLocalInitialized();
     this.listeners = new Set();
-  }
-
-  ensureLocalInitialized() {
-    const existing = storageAdapter.getItem(STORAGE_KEY, null);
-    if (!existing || !Array.isArray(existing)) {
-      storageAdapter.setItem(STORAGE_KEY, []);
-    }
   }
 
   notify() {
@@ -38,75 +29,74 @@ class CategoryRepository {
   }
 
   async getAll(onlyActive = false) {
-    if (isSupabaseConfigured()) {
-      try {
-        let query = supabase
-          .from('categories')
-          .select('*')
-          .order('name', { ascending: true });
+    if (!isSupabaseConfigured()) {
+      return [];
+    }
 
-        if (onlyActive) {
-          query = query.eq('active', true);
-        }
+    try {
+      let query = supabase
+        .from('categories')
+        .select('*')
+        .order('name', { ascending: true });
 
-        const { data, error } = await query;
-        if (error) throw error;
-        if (Array.isArray(data)) {
-          return data;
-        }
-      } catch (err) {
-        console.warn('Supabase categories fetch fallback:', err.message);
+      if (onlyActive) {
+        query = query.eq('active', true);
       }
-    }
 
-    // Local fallback
-    this.ensureLocalInitialized();
-    let categories = storageAdapter.getItem(STORAGE_KEY, []);
-    if (onlyActive) {
-      categories = categories.filter((c) => c.active !== false);
+      const { data, error } = await query;
+      if (error) {
+        console.error('Supabase categories fetch error:', error);
+        return [];
+      }
+
+      return Array.isArray(data) ? data : [];
+    } catch (err) {
+      console.error('Supabase categories fetch fatal error:', err);
+      return [];
     }
-    return categories;
   }
 
   async getById(id) {
-    if (isSupabaseConfigured()) {
-      try {
-        const { data, error } = await supabase
-          .from('categories')
-          .select('*')
-          .eq('id', id)
-          .single();
-        if (error) throw error;
-        return data;
-      } catch (err) {
-        console.warn('Supabase category getById fallback:', err.message);
-      }
-    }
+    if (!id || !isSupabaseConfigured()) return null;
 
-    const all = await this.getAll();
-    return all.find((c) => c.id === id) || null;
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (error || !data) return null;
+      return data;
+    } catch (err) {
+      console.error('Supabase category getById error:', err);
+      return null;
+    }
   }
 
   async getBySlug(slug) {
-    if (isSupabaseConfigured()) {
-      try {
-        const { data, error } = await supabase
-          .from('categories')
-          .select('*')
-          .eq('slug', slug)
-          .single();
-        if (error) throw error;
-        return data;
-      } catch (err) {
-        console.warn('Supabase category getBySlug fallback:', err.message);
-      }
-    }
+    if (!slug || !isSupabaseConfigured()) return null;
 
-    const all = await this.getAll();
-    return all.find((c) => c.slug === slug) || null;
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('slug', slug)
+        .maybeSingle();
+
+      if (error || !data) return null;
+      return data;
+    } catch (err) {
+      console.error('Supabase category getBySlug error:', err);
+      return null;
+    }
   }
 
   async create(categoryData) {
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase não configurado. Não é possível criar categorias.');
+    }
+
     const slug = categoryData.slug || generateSlug(categoryData.name);
     const payload = {
       name: categoryData.name.trim(),
@@ -116,90 +106,51 @@ class CategoryRepository {
       active: categoryData.active !== undefined ? categoryData.active : true
     };
 
-    if (isSupabaseConfigured()) {
-      try {
-        const { data, error } = await supabase
-          .from('categories')
-          .insert([payload])
-          .select()
-          .single();
-        if (error) throw error;
-        this.notify();
-        return data;
-      } catch (err) {
-        console.error('Supabase category create error:', err);
-        throw err;
-      }
-    }
+    const { data, error } = await supabase
+      .from('categories')
+      .insert([payload])
+      .select()
+      .single();
 
-    // Local fallback
-    const all = await this.getAll();
-    const newCategory = {
-      id: `cat-${Date.now()}`,
-      ...payload,
-      createdAt: new Date().toISOString()
-    };
-    all.push(newCategory);
-    storageAdapter.setItem(STORAGE_KEY, all);
+    if (error) throw error;
     this.notify();
-    return newCategory;
+    return data;
   }
 
   async update(id, updates) {
+    if (!id || !isSupabaseConfigured()) {
+      throw new Error('Supabase não configurado. Não é possível atualizar categorias.');
+    }
+
     const payload = { ...updates };
     if (updates.name && !updates.slug) {
       payload.slug = generateSlug(updates.name);
     }
     payload.updated_at = new Date().toISOString();
 
-    if (isSupabaseConfigured()) {
-      try {
-        const { data, error } = await supabase
-          .from('categories')
-          .update(payload)
-          .eq('id', id)
-          .select()
-          .single();
-        if (error) throw error;
-        this.notify();
-        return data;
-      } catch (err) {
-        console.error('Supabase category update error:', err);
-        throw err;
-      }
-    }
+    const { data, error } = await supabase
+      .from('categories')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single();
 
-    // Local fallback
-    const all = await this.getAll();
-    const index = all.findIndex((c) => c.id === id);
-    if (index === -1) throw new Error('Categoria não encontrada.');
-
-    all[index] = { ...all[index], ...payload };
-    storageAdapter.setItem(STORAGE_KEY, all);
+    if (error) throw error;
     this.notify();
-    return all[index];
+    return data;
   }
 
   async delete(id) {
-    if (isSupabaseConfigured()) {
-      try {
-        const { error } = await supabase
-          .from('categories')
-          .delete()
-          .eq('id', id);
-        if (error) throw error;
-        this.notify();
-        return true;
-      } catch (err) {
-        console.error('Supabase category delete error:', err);
-        throw err;
-      }
+    if (!id || !isSupabaseConfigured()) {
+      throw new Error('Supabase não configurado. Não é possível remover categorias.');
     }
 
-    // Local fallback
-    let all = await this.getAll();
-    all = all.filter((c) => c.id !== id);
-    storageAdapter.setItem(STORAGE_KEY, all);
+    const { error } = await supabase
+      .from('categories')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
     this.notify();
     return true;
   }

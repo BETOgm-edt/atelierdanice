@@ -116,19 +116,33 @@ export const AdminCategories = () => {
       </div>
 
       {/* Grid of Categories */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: '1.5rem'
-        }}
-      >
-        {categories.map((cat) => {
-          const productCount = products.filter(p => p.categoryId === cat.id).length;
+      {categories.length === 0 ? (
+        <div
+          style={{
+            backgroundColor: 'var(--color-bg-card)',
+            borderRadius: 'var(--radius-xl)',
+            border: '1px solid var(--color-border)',
+            padding: '3rem 1.5rem',
+            textAlign: 'center',
+            color: 'var(--color-text-muted)'
+          }}
+        >
+          Nenhuma categoria cadastrada ainda. Clique em "Nova Categoria" para criar a primeira coleção.
+        </div>
+      ) : (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: '1.5rem'
+          }}
+        >
+          {categories.map((cat) => {
+            const productCount = products.filter(p => p.categoryId === cat.id).length;
 
-          return (
-            <div
-              key={cat.id}
+            return (
+              <div
+                key={cat.id}
               style={{
                 backgroundColor: 'var(--color-bg-card)',
                 borderRadius: 'var(--radius-xl)',
@@ -226,7 +240,8 @@ export const AdminCategories = () => {
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
 
       {/* Create / Edit Modal */}
       {isModalOpen && (

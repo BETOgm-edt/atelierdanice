@@ -1,20 +1,19 @@
 /**
- * ATELIER NICE — PRODUCT REPOSITORY (SUPABASE + RELATIONAL IMAGES + FALLBACK)
- * Manages haute-couture products, images, and filters in Supabase Database.
+ * ATELIER NICE — PRODUCT REPOSITORY (PURE SUPABASE DATABASE)
+ * Strict Rule: NADA FICTÍCIO NO SITE.
+ * Manages haute-couture products and relational images directly in Supabase Database.
+ * No local mock data, no mock seeds.
  */
 
 import { supabase, isSupabaseConfigured } from '../lib/supabase/client';
-import { storageAdapter } from './storageAdapter';
 import { generateSKU, generateSlug, calculateTotalStock } from '../core/utils';
 import { storageRepository } from './storageRepository';
-
-const STORAGE_KEY = 'atelier_nice_products';
 
 // Helper to format Supabase product row into normalized frontend object
 const formatProductFromDB = (row) => {
   if (!row) return null;
 
-  // Format images array
+  // Format images array from relational product_images
   const rawImages = Array.isArray(row.product_images) ? row.product_images : [];
   rawImages.sort((a, b) => (a.position || 0) - (b.position || 0));
 
@@ -66,15 +65,7 @@ const formatProductFromDB = (row) => {
 
 class ProductRepository {
   constructor() {
-    this.ensureLocalInitialized();
     this.listeners = new Set();
-  }
-
-  ensureLocalInitialized() {
-    const existing = storageAdapter.getItem(STORAGE_KEY, null);
-    if (!existing || !Array.isArray(existing)) {
-      storageAdapter.setItem(STORAGE_KEY, []);
-    }
   }
 
   notify() {
@@ -93,178 +84,149 @@ class ProductRepository {
   }
 
   async getAll(filter = {}) {
-    if (isSupabaseConfigured()) {
-      try {
-        let query = supabase
-          .from('products')
-          .select(`
-            *,
-            categories (id, name, slug),
-            product_images (*)
-          `)
-          .order('created_at', { ascending: false });
+    if (!isSupabaseConfigured()) {
+      return [];
+    }
 
-        // Filter: Public catalog vs Admin
-        if (filter.onlyCatalog) {
-          query = query.in('status', ['published', 'out_of_stock']);
-        } else if (filter.status && filter.status !== 'all') {
-          query = query.eq('status', filter.status);
-        }
+    try {
+      let query = supabase
+        .from('products')
+        .select(`
+          *,
+          categories (id, name, slug),
+          product_images (*)
+        `)
+        .order('created_at', { ascending: false });
 
-        // Filter: Category
-        if (filter.categoryId && filter.categoryId !== 'all') {
-          query = query.eq('category_id', filter.categoryId);
-        }
-
-        // Filter: Modality
-        if (filter.modality && filter.modality !== 'all') {
-          if (filter.modality === 'sale') {
-            query = query.in('modality', ['sale', 'both']);
-          } else if (filter.modality === 'rent') {
-            query = query.in('modality', ['rent', 'both']);
-          }
-        }
-
-        // Filter: Featured
-        if (filter.featured === true) {
-          query = query.eq('featured', true);
-        }
-
-        const { data, error } = await query;
-        if (error) throw error;
-
-        if (Array.isArray(data)) {
-          let formatted = data.map(formatProductFromDB);
-
-          // Client-side text search if provided
-          if (filter.search && filter.search.trim() !== '') {
-            const term = filter.search.trim().toLowerCase();
-            formatted = formatted.filter((p) => {
-              const nameMatch = p.name?.toLowerCase().includes(term);
-              const skuMatch = p.sku?.toLowerCase().includes(term);
-              const catMatch = p.categoryName?.toLowerCase().includes(term);
-              const tagMatch = Array.isArray(p.tags) && p.tags.some((t) => t.toLowerCase().includes(term));
-              return nameMatch || skuMatch || catMatch || tagMatch;
-            });
-          }
-
-          // Sorting
-          if (filter.sortBy) {
-            switch (filter.sortBy) {
-              case 'price-asc':
-                formatted.sort((a, b) => (a.promotionalPrice || a.price) - (b.promotionalPrice || b.price));
-                break;
-              case 'price-desc':
-                formatted.sort((a, b) => (b.promotionalPrice || b.price) - (a.promotionalPrice || a.price));
-                break;
-              case 'name-asc':
-                formatted.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-                break;
-              case 'name-desc':
-                formatted.sort((a, b) => b.name.localeCompare(a.name, 'pt-BR'));
-                break;
-              case 'newest':
-              default:
-                formatted.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-                break;
-            }
-          }
-
-          return formatted;
-        }
-      } catch (err) {
-        console.warn('Supabase products fetch fallback:', err.message);
+      // Filter: Public catalog vs Admin
+      if (filter.onlyCatalog) {
+        query = query.in('status', ['published', 'out_of_stock']);
+      } else if (filter.status && filter.status !== 'all') {
+        query = query.eq('status', filter.status);
       }
-    }
 
-    // Local fallback
-    this.ensureLocalInitialized();
-    let products = storageAdapter.getItem(STORAGE_KEY, []);
-
-    if (filter.onlyCatalog) {
-      products = products.filter((p) => p.status === 'published' || p.status === 'out_of_stock');
-    } else if (filter.status && filter.status !== 'all') {
-      products = products.filter((p) => p.status === filter.status);
-    }
-
-    if (filter.categoryId && filter.categoryId !== 'all') {
-      products = products.filter((p) => p.categoryId === filter.categoryId);
-    }
-
-    if (filter.modality && filter.modality !== 'all') {
-      if (filter.modality === 'sale') {
-        products = products.filter((p) => p.modality === 'sale' || p.modality === 'both');
-      } else if (filter.modality === 'rent') {
-        products = products.filter((p) => p.modality === 'rent' || p.modality === 'both');
+      // Filter: Category
+      if (filter.categoryId && filter.categoryId !== 'all') {
+        query = query.eq('category_id', filter.categoryId);
       }
-    }
 
-    if (filter.search && filter.search.trim() !== '') {
-      const term = filter.search.trim().toLowerCase();
-      products = products.filter((p) => {
-        const nameMatch = p.name?.toLowerCase().includes(term);
-        const skuMatch = p.sku?.toLowerCase().includes(term);
-        const catMatch = p.categoryName?.toLowerCase().includes(term);
-        return nameMatch || skuMatch || catMatch;
-      });
-    }
+      // Filter: Modality
+      if (filter.modality && filter.modality !== 'all') {
+        if (filter.modality === 'sale') {
+          query = query.in('modality', ['sale', 'both']);
+        } else if (filter.modality === 'rent') {
+          query = query.in('modality', ['rent', 'both']);
+        }
+      }
 
-    return products;
+      // Filter: Featured
+      if (filter.featured === true) {
+        query = query.eq('featured', true);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        console.error('Supabase products fetch error:', error);
+        return [];
+      }
+
+      if (!Array.isArray(data)) return [];
+
+      let formatted = data.map(formatProductFromDB);
+
+      // Client-side text search if provided
+      if (filter.search && filter.search.trim() !== '') {
+        const term = filter.search.trim().toLowerCase();
+        formatted = formatted.filter((p) => {
+          const nameMatch = p.name?.toLowerCase().includes(term);
+          const skuMatch = p.sku?.toLowerCase().includes(term);
+          const catMatch = p.categoryName?.toLowerCase().includes(term);
+          const tagMatch = Array.isArray(p.tags) && p.tags.some((t) => t.toLowerCase().includes(term));
+          return nameMatch || skuMatch || catMatch || tagMatch;
+        });
+      }
+
+      // Sorting
+      if (filter.sortBy) {
+        switch (filter.sortBy) {
+          case 'price-asc':
+            formatted.sort((a, b) => (a.promotionalPrice || a.price) - (b.promotionalPrice || b.price));
+            break;
+          case 'price-desc':
+            formatted.sort((a, b) => (b.promotionalPrice || b.price) - (a.promotionalPrice || a.price));
+            break;
+          case 'name-asc':
+            formatted.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+            break;
+          case 'name-desc':
+            formatted.sort((a, b) => b.name.localeCompare(a.name, 'pt-BR'));
+            break;
+          case 'newest':
+          default:
+            formatted.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+            break;
+        }
+      }
+
+      return formatted;
+    } catch (err) {
+      console.error('Supabase products fetch fatal error:', err);
+      return [];
+    }
   }
 
   async getById(id) {
-    if (isSupabaseConfigured()) {
-      try {
-        const { data, error } = await supabase
-          .from('products')
-          .select(`
-            *,
-            categories (id, name, slug),
-            product_images (*)
-          `)
-          .eq('id', id)
-          .single();
+    if (!id || !isSupabaseConfigured()) return null;
 
-        if (error) throw error;
-        return formatProductFromDB(data);
-      } catch (err) {
-        console.warn('Supabase product getById fallback:', err.message);
-      }
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          categories (id, name, slug),
+          product_images (*)
+        `)
+        .eq('id', id)
+        .maybeSingle();
+
+      if (error || !data) return null;
+      return formatProductFromDB(data);
+    } catch (err) {
+      console.error('Supabase product getById error:', err);
+      return null;
     }
-
-    const all = await this.getAll();
-    return all.find((p) => p.id === id) || null;
   }
 
   async getBySlug(slug) {
-    if (isSupabaseConfigured()) {
-      try {
-        const { data, error } = await supabase
-          .from('products')
-          .select(`
-            *,
-            categories (id, name, slug),
-            product_images (*)
-          `)
-          .eq('slug', slug)
-          .single();
+    if (!slug || !isSupabaseConfigured()) return null;
 
-        if (error) throw error;
-        return formatProductFromDB(data);
-      } catch (err) {
-        console.warn('Supabase product getBySlug fallback:', err.message);
-      }
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          categories (id, name, slug),
+          product_images (*)
+        `)
+        .eq('slug', slug)
+        .maybeSingle();
+
+      if (error || !data) return null;
+      return formatProductFromDB(data);
+    } catch (err) {
+      console.error('Supabase product getBySlug error:', err);
+      return null;
     }
-
-    const all = await this.getAll();
-    return all.find((p) => p.slug === slug) || null;
   }
 
   async create(productData) {
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase não está configurado. Não é possível cadastrar produtos.');
+    }
+
     const slug = productData.slug || generateSlug(productData.name);
     const sku = productData.sku || generateSKU(productData.name, productData.categoryName || 'ATELIER');
-
-    const totalStock = calculateTotalStock(productData.variants) || parseInt(productData.stock || 1, 10);
+    const totalStock = calculateTotalStock(productData.variants) || parseInt(productData.stock || 0, 10);
 
     const productPayload = {
       name: productData.name.trim(),
@@ -288,63 +250,44 @@ class ProductRepository {
       seo: productData.seo || {}
     };
 
-    if (isSupabaseConfigured()) {
-      try {
-        // 1. Insert product row
-        const { data: createdProduct, error: prodError } = await supabase
-          .from('products')
-          .insert([productPayload])
-          .select()
-          .single();
+    // 1. Insert product row
+    const { data: createdProduct, error: prodError } = await supabase
+      .from('products')
+      .insert([productPayload])
+      .select()
+      .single();
 
-        if (prodError) throw prodError;
+    if (prodError) throw prodError;
 
-        // 2. Insert image rows in product_images
-        if (Array.isArray(productData.images) && productData.images.length > 0) {
-          const imageRows = productData.images.map((img, index) => ({
-            product_id: createdProduct.id,
-            storage_path: img.storagePath || `products/${createdProduct.id}/img-${index}.webp`,
-            public_url: img.publicUrl || img.url,
-            alt_text: img.alt || img.altText || createdProduct.name,
-            position: index,
-            is_cover: Boolean(img.isPrimary || img.isCover || index === 0)
-          }));
+    // 2. Insert image rows in product_images
+    if (Array.isArray(productData.images) && productData.images.length > 0) {
+      const imageRows = productData.images.map((img, index) => ({
+        product_id: createdProduct.id,
+        storage_path: img.storagePath || `products/${createdProduct.id}/img-${index}.webp`,
+        public_url: img.publicUrl || img.url,
+        alt_text: img.alt || img.altText || createdProduct.name,
+        position: index,
+        is_cover: Boolean(img.isPrimary || img.isCover || index === 0)
+      }));
 
-          const { error: imgError } = await supabase
-            .from('product_images')
-            .insert(imageRows);
+      const { error: imgError } = await supabase
+        .from('product_images')
+        .insert(imageRows);
 
-          if (imgError) {
-            console.warn('Erro ao inserir imagens relacionais:', imgError.message);
-          }
-        }
-
-        this.notify();
-        return await this.getById(createdProduct.id);
-      } catch (err) {
-        console.error('Supabase product create error:', err);
-        throw err;
+      if (imgError) {
+        console.warn('Erro ao inserir imagens relacionais:', imgError.message);
       }
     }
 
-    // Local fallback
-    const all = await this.getAll();
-    const newProduct = {
-      id: `prod-${Date.now()}`,
-      ...productPayload,
-      categoryId: productData.categoryId,
-      categoryName: productData.categoryName,
-      images: productData.images || [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    all.unshift(newProduct);
-    storageAdapter.setItem(STORAGE_KEY, all);
     this.notify();
-    return newProduct;
+    return await this.getById(createdProduct.id);
   }
 
   async update(id, updates) {
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase não está configurado. Não é possível atualizar produtos.');
+    }
+
     const productPayload = {};
 
     if (updates.name !== undefined) productPayload.name = updates.name.trim();
@@ -368,57 +311,36 @@ class ProductRepository {
     if (updates.tags !== undefined) productPayload.tags = updates.tags;
     if (updates.seo !== undefined) productPayload.seo = updates.seo;
 
-    if (isSupabaseConfigured()) {
-      try {
-        // 1. Update product row
-        const { error: prodError } = await supabase
-          .from('products')
-          .update(productPayload)
-          .eq('id', id);
+    // 1. Update product row
+    const { error: prodError } = await supabase
+      .from('products')
+      .update(productPayload)
+      .eq('id', id);
 
-        if (prodError) throw prodError;
+    if (prodError) throw prodError;
 
-        // 2. Sync product images if updated
-        if (Array.isArray(updates.images)) {
-          // Delete old image references
-          await supabase.from('product_images').delete().eq('product_id', id);
+    // 2. Sync product images if updated
+    if (Array.isArray(updates.images)) {
+      // Delete old image references
+      await supabase.from('product_images').delete().eq('product_id', id);
 
-          // Re-insert updated gallery
-          if (updates.images.length > 0) {
-            const imageRows = updates.images.map((img, index) => ({
-              product_id: id,
-              storage_path: img.storagePath || `products/${id}/img-${index}.webp`,
-              public_url: img.publicUrl || img.url,
-              alt_text: img.alt || img.altText || updates.name || 'Foto Vestido',
-              position: index,
-              is_cover: Boolean(img.isPrimary || img.isCover || index === 0)
-            }));
+      // Re-insert updated gallery
+      if (updates.images.length > 0) {
+        const imageRows = updates.images.map((img, index) => ({
+          product_id: id,
+          storage_path: img.storagePath || `products/${id}/img-${index}.webp`,
+          public_url: img.publicUrl || img.url,
+          alt_text: img.alt || img.altText || updates.name || 'Foto Vestido',
+          position: index,
+          is_cover: Boolean(img.isPrimary || img.isCover || index === 0)
+        }));
 
-            await supabase.from('product_images').insert(imageRows);
-          }
-        }
-
-        this.notify();
-        return await this.getById(id);
-      } catch (err) {
-        console.error('Supabase product update error:', err);
-        throw err;
+        await supabase.from('product_images').insert(imageRows);
       }
     }
 
-    // Local fallback
-    const all = await this.getAll();
-    const index = all.findIndex((p) => p.id === id);
-    if (index === -1) throw new Error('Vestido não encontrado.');
-
-    all[index] = {
-      ...all[index],
-      ...updates,
-      updatedAt: new Date().toISOString()
-    };
-    storageAdapter.setItem(STORAGE_KEY, all);
     this.notify();
-    return all[index];
+    return await this.getById(id);
   }
 
   async duplicate(id) {
@@ -452,62 +374,32 @@ class ProductRepository {
 
   async bulkUpdateStatus(ids, newStatus) {
     if (!Array.isArray(ids) || ids.length === 0) return 0;
+    if (!isSupabaseConfigured()) throw new Error('Supabase não configurado.');
 
-    if (isSupabaseConfigured()) {
-      try {
-        const { error } = await supabase
-          .from('products')
-          .update({ status: newStatus })
-          .in('id', ids);
+    const { error } = await supabase
+      .from('products')
+      .update({ status: newStatus })
+      .in('id', ids);
 
-        if (error) throw error;
-        this.notify();
-        return ids.length;
-      } catch (err) {
-        console.error('Supabase bulkUpdateStatus error:', err);
-        throw err;
-      }
-    }
-
-    // Local fallback
-    const all = await this.getAll();
-    let updatedCount = 0;
-    all.forEach((p) => {
-      if (ids.includes(p.id)) {
-        p.status = newStatus;
-        updatedCount++;
-      }
-    });
-    storageAdapter.setItem(STORAGE_KEY, all);
+    if (error) throw error;
     this.notify();
-    return updatedCount;
+    return ids.length;
   }
 
   async delete(id) {
-    if (isSupabaseConfigured()) {
-      try {
-        // Remove storage images first
-        await storageRepository.deleteProductFolder(id);
+    if (!id) return false;
+    if (!isSupabaseConfigured()) throw new Error('Supabase não configurado.');
 
-        // Delete product from database (cascade deletes product_images)
-        const { error } = await supabase
-          .from('products')
-          .delete()
-          .eq('id', id);
+    // Remove storage images first
+    await storageRepository.deleteProductFolder(id);
 
-        if (error) throw error;
-        this.notify();
-        return true;
-      } catch (err) {
-        console.error('Supabase product delete error:', err);
-        throw err;
-      }
-    }
+    // Delete product from database (cascade deletes product_images)
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', id);
 
-    // Local fallback
-    let all = await this.getAll();
-    all = all.filter((p) => p.id !== id);
-    storageAdapter.setItem(STORAGE_KEY, all);
+    if (error) throw error;
     this.notify();
     return true;
   }

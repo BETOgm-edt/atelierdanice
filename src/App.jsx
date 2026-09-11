@@ -28,7 +28,7 @@ import { useAuth } from './context/AuthContext';
 import { useStore } from './context/StoreContext';
 
 export function App() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const { products, categories, loading } = useStore();
 
   // Navigation State
@@ -52,6 +52,16 @@ export function App() {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
+  // Sync admin tab when navigating to /admin/:tab
+  useEffect(() => {
+    if (currentRoute.startsWith('/admin/')) {
+      const sub = currentRoute.replace('/admin/', '').split('?')[0].split('/')[0];
+      if (['products', 'categories', 'orders', 'customers', 'stock', 'content', 'settings', 'dashboard'].includes(sub)) {
+        setAdminTab(sub);
+      }
+    }
+  }, [currentRoute]);
 
   // Sync active product when navigating directly or refreshing on /vestidos/:id
   useEffect(() => {
@@ -101,6 +111,18 @@ export function App() {
 
   // 1. ADMIN ROUTE RENDERING
   if (currentRoute.startsWith('/admin')) {
+    if (authLoading) {
+      return (
+        <div style={{ minHeight: '100vh', backgroundColor: '#4E231F', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FAF0EC' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ width: 44, height: 44, border: '3px solid rgba(243,216,207,0.25)', borderTopColor: '#FAF0EC', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 1.25rem' }} />
+            <span style={{ fontSize: '0.85rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#FAF0EC', fontWeight: 600 }}>Verificando Sessão Supabase...</span>
+          </div>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      );
+    }
+
     if (!isAuthenticated) {
       return (
         <AdminLogin onReturnToStore={() => navigate('/')} />

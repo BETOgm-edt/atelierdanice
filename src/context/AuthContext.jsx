@@ -33,15 +33,17 @@ export const AuthProvider = ({ children }) => {
             }
           }
         } else {
-          // Fallback if environment variables are not yet populated
-          const saved = localStorage.getItem('atelier_nice_admin_session');
-          if (saved && isMounted) {
-            const parsed = JSON.parse(saved);
-            setAdminUser(parsed);
+          if (isMounted) {
+            setSession(null);
+            setAdminUser(null);
           }
         }
       } catch (err) {
         console.error('Falha na inicialização da autenticação:', err);
+        if (isMounted) {
+          setSession(null);
+          setAdminUser(null);
+        }
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -86,49 +88,49 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: 'Por favor, informe e-mail e senha.' };
       }
 
+      if (!isSupabaseConfigured()) {
+        return {
+          success: false,
+          error: 'Serviço de autenticação Supabase não configurado ou indisponível.'
+        };
+      }
+
       const cleanEmail = email.trim().toLowerCase();
 
-      if (isSupabaseConfigured()) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password
-        });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password
+      });
 
-        if (error) {
-          let userFriendlyMessage = 'E-mail ou senha incorretos.';
-          if (error.message.includes('Invalid login credentials')) {
-            userFriendlyMessage = 'Credenciais inválidas. Verifique seu e-mail e senha.';
-          } else if (error.message.includes('Email not confirmed')) {
-            userFriendlyMessage = 'E-mail ainda não confirmado no Supabase.';
-          }
-          return { success: false, error: userFriendlyMessage };
+      if (error) {
+        let userFriendlyMessage = 'E-mail ou senha incorretos.';
+        if (error.message.includes('Invalid login credentials')) {
+          userFriendlyMessage = 'Credenciais inválidas. Verifique seu e-mail e senha.';
+        } else if (error.message.includes('Email not confirmed')) {
+          userFriendlyMessage = 'E-mail ainda não confirmado no Supabase.';
+        } else if (error.message.includes('Too many requests')) {
+          userFriendlyMessage = 'Muitas tentativas. Aguarde alguns instantes e tente novamente.';
+        } else if (error.message) {
+          userFriendlyMessage = error.message;
         }
-
-        const user = {
-          id: data.user.id,
-          email: data.user.email,
-          name: data.user.user_metadata?.name || 'Administradora Atelier Nice',
-          role: 'admin',
-          avatar: data.user.user_metadata?.avatar_url || null
-        };
-
-        setSession(data.session);
-        setAdminUser(user);
-        return { success: true, user };
-      } else {
-        // Safe development fallback when .env.local has placeholders
-        const user = {
-          id: 'adm-demo-1',
-          name: 'Nice — Diretora Criativa',
-          email: cleanEmail,
-          role: 'admin',
-          avatar: null,
-          isDevSession: true
-        };
-        setAdminUser(user);
-        localStorage.setItem('atelier_nice_admin_session', JSON.stringify(user));
-        return { success: true, user };
+        return { success: false, error: userFriendlyMessage };
       }
+
+      if (!data?.user) {
+        return { success: false, error: 'Usuário não encontrado no Supabase Auth.' };
+      }
+
+      const user = {
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.user_metadata?.name || 'Administradora Atelier Nice',
+        role: 'admin',
+        avatar: data.user.user_metadata?.avatar_url || null
+      };
+
+      setSession(data.session);
+      setAdminUser(user);
+      return { success: true, user };
     } catch (err) {
       console.error('Erro no login:', err);
       return { success: false, error: 'Erro de conexão com o servidor de autenticação.' };
@@ -142,7 +144,6 @@ export const AuthProvider = ({ children }) => {
       }
       setAdminUser(null);
       setSession(null);
-      localStorage.removeItem('atelier_nice_admin_session');
     } catch (err) {
       console.error('Erro no logout:', err);
       setAdminUser(null);
@@ -155,7 +156,7 @@ export const AuthProvider = ({ children }) => {
       value={{
         adminUser,
         session,
-        isAuthenticated: Boolean(adminUser),
+        isAuthenticated: Boolean(session?.user && adminUser),
         loading,
         login,
         logout,

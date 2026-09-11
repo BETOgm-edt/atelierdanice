@@ -158,8 +158,9 @@ CREATE POLICY "Admin delete products bucket"
 -- 8. Carga Inicial de Categorias (Se a tabela estiver vazia)
 INSERT INTO public.categories (name, slug, description, image, active)
 VALUES 
-  ('Vestidos de Festa & Gala', 'festa-e-gala', 'Vestidos longos, fendas imponentes e tecidos nobres para formaturas, premiações e noites inesquecíveis.', 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?auto=format&fit=crop&w=800&q=80', true),
-  ('Madrinhas de Casamento', 'madrinhas', 'Modelagens fluidas e estruturadas em paletas harmônicas para altares sofisticados.', 'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?auto=format&fit=crop&w=800&q=80', true),
-  ('Noivas & Cerimônia Civil', 'noivas-e-civil', 'Linhas puras, rendas francesas e sofisticação atemporal para noivas modernas e cerimônias intimistas.', 'https://images.unsplash.com/photo-1594552072238-b8a33785b261?auto=format&fit=crop&w=800&q=80', true),
-  ('Formatura & Debutantes', 'formatura-debutantes', 'Criações exclusivas com presença marcante, corsets estruturados e brilho sob medida.', 'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=800&q=80', true)
+  ('Vestidos de Festa & Gala', 'festa-e-gala', 'Vestidos longos, fendas imponentes e tecidos nobres para formaturas, premiações e noites inesquecíveis.', '', true),
+  ('Madrinhas de Casamento', 'madrinhas', 'Modelagens fluidas e estruturadas em paletas harmônicas para altares sofisticados.', '', true),
+  ('Noivas & Cerimônia Civil', 'noivas-e-civil', 'Linhas puras, rendas francesas e sofisticação atemporal para noivas modernas e cerimônias intimistas.', '', true),
+  ('Formatura & Debutantes', 'formatura-debutantes', 'Criações exclusivas com presença marcante, corsets estruturados e brilho sob medida.', '', true)
 ON CONFLICT (slug) DO NOTHING;
+
